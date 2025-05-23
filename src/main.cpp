@@ -8,15 +8,11 @@
 
 //I could make a shape array to load each shape and then have enums
 //for the index with the name being the index for that object
-//todo 
-//need to improt all obj as models centered at origin
-//need to add cell shading technique
-//need to figure out how to add textures for multi obj
-//
-//
+//TODO 
+//figure out sensitivity for the camera and stuff
+//implement physics
 //make it so the obstacles are cell shaded solid colors
 //make it so that there is function to draw silhoutes via cpu with 
-//textured buildings
 
 
 #include <iostream>
@@ -36,6 +32,8 @@
 
 // value_ptr for glm
 #include <glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace std;
@@ -167,9 +165,16 @@ public:
     vec3 gMax;
 
 
+    glm::quat orientation = glm::quat(1, 0, 0, 0);
+    float phi = 0.0f;
+    float theta = PI/2;
+    float roll = 0;
+
 	//global data (larger program should be encapsulated)
 	float gRot = 0;
 	float gCamH = 0;
+    float sensitivity = .1 ;
+    float radius = 1.0f;
 	//animation data
 	float lightTrans = 0;
 	float gTrans = -3;
@@ -194,10 +199,10 @@ public:
 		}
 		//update camera height
 		if (key == GLFW_KEY_S && action == GLFW_PRESS){
-			gCamH  += 0.25;
+			gCamH  += 1.25;
 		}
 		if (key == GLFW_KEY_F && action == GLFW_PRESS){
-			gCamH  -= 0.25;
+			gCamH  -= 1.25;
 		}
 
 
@@ -217,21 +222,89 @@ public:
 		if (key == GLFW_KEY_Z && action == GLFW_RELEASE) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		}
-	}
+	} 
 
 	void mouseCallback(GLFWwindow *window, int button, int action, int mods)
 	{
 		double posX, posY;
 
-		if (action == GLFW_PRESS)
-		{
-			 glfwGetCursorPos(window, &posX, &posY);
-			 cout << "Pos X " << posX <<  " Pos Y " << posY << endl;
-		}
+
+        glfwGetCursorPos(window, &posX, &posY);
+        cout << "Pos X " << posX <<  " Pos Y " << posY << endl;
 	}
+
+    //gather the deltaX and deltaY on scroll and change the phi and theta
+    //based off the sensitivity
+    void scrollCallback(GLFWwindow *window, double deltaX, double deltaY){
+       phi -= deltaY * sensitivity;
+       theta += deltaX * sensitivity;
+       if(phi > 80) phi = 80;
+       if(phi < -80) phi = -80;
+    }
+
+    //gather the controller inputs on callback
+    void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY){
+        /*
+        cout << "leftX" << leftX << endl;
+        cout << "leftY" << leftY << endl;
+        cout << "rightX" << rightX << endl;
+        cout << "rightY" << rightY << endl;
+
+        //leftX yaw
+        theta -= leftX * sensitivity*6;
+        //pitch
+        phi += rightY * sensitivity*6;
+        //right X rotate camera
+        cRot += rightX;
+        //leftY throttle
+        //
+        //*/
+        float yawDelta   = -leftX * .07;
+        float pitchDelta =  rightY * .07;
+        float rollDelta  =  rightX * .07;
+
+        // Create quaternions around local axes (apply roll → pitch → yaw)
+        // IMPORTANT: Order matters! Right-hand rule applies.
+        glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
+        glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
+        glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
+
+        // Compose rotation in drone's local frame
+        orientation = orientation * qYaw * qPitch * qRoll;
+        orientation = glm::normalize(orientation);
+
+    }
+
+    /*
+     * Regular controls
+    //with the phi and theta calculate the direction vectur and 
+    void updateCamera(shared_ptr<MatrixStack> &view){
+        vec3 direction;
+        vec3 eye = vec3(0, 10, -30);
+        eye.y += gCamH;
+        direction.x = radius*cos(glm::radians(phi)) * cos(glm::radians(theta));
+        direction.y = radius*sin(glm::radians(phi));
+        direction.z = radius*cos(glm::radians(phi)) * cos((PI/2) -radians(theta));
+        direction = glm::normalize(direction);
+
+        //eye + direction for look at because we need look at relative 
+        //to where camera is 
+        view->lookAt(eye, eye+direction, vec3(0, 1, 0));
+    }
+    */
+
+
+    void updateCamera(shared_ptr<MatrixStack> &view){
+        vec3 eye = vec3(0.0f, 0.0f, 0.0f); // fixed for now, or add movement
+        vec3 forward = orientation * vec3(0.0f, 0.0f, -1.0f);
+        vec3 up      = orientation * vec3(0.0f, 1.0f,  0.0f);
+        //to where camera is 
+        view->lookAt(eye, eye+forward, up);
+    }
 
 	void resizeCallback(GLFWwindow *window, int width, int height)
 	{
+        sensitivity = 180.0f / height;
 		glViewport(0, 0, width, height);
 	}
 
@@ -885,13 +958,10 @@ public:
 		// View is global translation along negative z for now
 		View->pushMatrix();
 		View->loadIdentity();
-		//camera up and down
-		//View->translate(vec3(0, gCamH, 0));
-        //View->rotate(gRot, vec3(0, 1, 0));
-		//global rotate (the whole scene )
-        ///
-        View->translate(vec3(0, gCamH-10, -65));
-        View->rotate(glfwGetTime()*.2, vec3(0, 1, 0));
+        updateCamera(View);
+        
+
+        //offload this to function
 
         //draw skybox
         texProg->bind();
@@ -909,8 +979,6 @@ public:
         Model->popMatrix();
         texProg->unbind();
 
-
-
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
@@ -920,7 +988,8 @@ public:
         }else{
             set_material_uniforms(prog, Material2);
         }
-    
+   
+        /*
         Model->pushMatrix();
             Model->translate(vec3(0, 5, 20));
             Model->rotate(-PI/2, vec3(0, 1, 0));
@@ -937,7 +1006,7 @@ public:
             setModel(prog, Model);
             bunny->draw(prog);
         Model->popMatrix();
-
+        */
 
         prog->unbind();
         cellProg->bind();
@@ -948,7 +1017,6 @@ public:
         //cylinder1
         cellProg->unbind();
 
-
         //Main scene
         texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -957,12 +1025,9 @@ public:
 		glUniform1i(texProg->getUniform("flip"), 1); 
 		glUniform1i(texProg->getUniform("lightToggle"), 1); 
 
-    
         Model->pushMatrix();
             Model->translate(vec3(0, 2, 0));
             Model->scale(vec3(2, 2, 2));
-
-
 
             //cylinder  in front
             Model->pushMatrix();
@@ -1005,15 +1070,21 @@ public:
                 cylinder1->draw(texProg);
             Model->popMatrix();
 
-
-
-
-
-
             //ground
             Model->pushMatrix();
                 Model->translate(vec3(0, -5, 5));
                 Model->rotate(-PI/2, vec3(0, 1, 0));
+                Model->scale(vec3(40, 10, 40));
+                texture2->bind(texProg->getUniform("Texture0"));
+                resize_and_center(ground->min, ground->max, Model);
+                setModel(texProg, Model);
+                ground->draw(texProg);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+                Model->translate(vec3(0, -5, 60));
+                Model->rotate(PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(40, 10, 40));
                 texture2->bind(texProg->getUniform("Texture0"));
                 resize_and_center(ground->min, ground->max, Model);
@@ -1044,16 +1115,12 @@ public:
                 setModel(texProg, Model);
                 cementwall->draw(texProg);
                 Model->pushMatrix();
-                    Model->translate(vec3(-20, 0, 0));
+                    Model->translate(vec3(-24, 0, 0));
                     Model->scale(vec3(1.5, 1, 1));
                     setModel(texProg, Model);
                     cementwall->draw(texProg);
                 Model->popMatrix();
             Model->popMatrix();
-
-
-
-
 
             //storage unit
             Model->pushMatrix();
@@ -1078,7 +1145,6 @@ public:
 
             Model->popMatrix();
 
-
             //guard rail middle right
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
@@ -1101,7 +1167,6 @@ public:
                 setModel(texProg, Model);
                 guardrail->draw(texProg);
             Model->popMatrix();
-
 
 
             //guard rail most left
@@ -1149,8 +1214,6 @@ public:
                 setModel(texProg, Model);
                 pallet->draw(texProg);
             Model->popMatrix();
-
-
 
             Model->pushMatrix();
                 Model->translate(vec3(1, 0, -2));
@@ -1200,9 +1263,6 @@ public:
                     walllong->draw(texProg);
                 Model->popMatrix();
 
-
-
-
                 Model->pushMatrix();
                     texture10->bind(texProg->getUniform("Texture0"));
                     Model->translate(vec3(38, 2, 7.5f));
@@ -1229,8 +1289,8 @@ public:
 
             //back tiled wall
             Model->pushMatrix();
-                Model->translate(vec3(-12, 1, 26));
-                Model->scale(vec3(12, 14, 5));
+                Model->translate(vec3(-10, 1, 26));
+                Model->scale(vec3(14, 14, 5));
                 texture11->bind(texProg->getUniform("Texture0"));
                 resize_and_center(tiledwall->min, tiledwall->max, Model);
                 setModel(texProg, Model);
@@ -1309,20 +1369,13 @@ public:
 
             //scaffolding
             Model->pushMatrix();
+                Model->translate(vec3(-21, -2, 5));
+                Model->rotate(PI/2, vec3(0, 1, 0));
+                Model->scale(vec3(5, 5, 5));
                 texture12->bind(texProg->getUniform("Texture0"));
                 resize_and_center(scaffolding->min, scaffolding->max, Model);
                 setModel(texProg, Model);
                 scaffolding->draw(texProg);
-            Model->popMatrix();
-
-
-            Model->pushMatrix();
-                Model->translate(vec3(2+lightTrans, 2+lightTrans, 2+lightTrans));
-                glUniform1i(texProg->getUniform("lightToggle"), 0);
-                texture5->bind(texProg->getUniform("Texture0"));
-                resize_and_center(sphere->min, sphere->max, Model);
-                setModel(texProg, Model);
-                sphere->draw(texProg);
             Model->popMatrix();
 
         Model->popMatrix();
@@ -1363,7 +1416,10 @@ public:
 		View->popMatrix();
 
 	}
+
 };
+
+
 
 int main(int argc, char *argv[])
 {
@@ -1397,6 +1453,7 @@ int main(int argc, char *argv[])
 		// Render scene.
 		application->render();
 
+        windowManager->pollGamepadInput();
 		// Swap front and back buffers.
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.

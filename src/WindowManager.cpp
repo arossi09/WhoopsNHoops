@@ -72,6 +72,7 @@ bool WindowManager::init(int const width, int const height)
 	glfwSetKeyCallback(windowHandle, key_callback);
 	glfwSetMouseButtonCallback(windowHandle, mouse_callback);
 	glfwSetFramebufferSizeCallback(windowHandle, resize_callback);
+	glfwSetScrollCallback(windowHandle, scroll_callback);
 
 	return true;
 }
@@ -115,3 +116,44 @@ void WindowManager::resize_callback(GLFWwindow * window, int in_width, int in_he
 		instance->callbacks->resizeCallback(window, in_width, in_height);
 	}
 }
+
+void WindowManager::scroll_callback(GLFWwindow * window, double in_deltaX, double in_deltaY)
+{
+	if (instance && instance->callbacks)
+	{
+		instance->callbacks->scrollCallback(window, in_deltaX, in_deltaY);
+	}
+}
+
+//poll gamepad input for gamepad or joystick(transmitter)
+void WindowManager::pollGamepadInput(){
+    int joystickID = GLFW_JOYSTICK_1;
+    if(glfwJoystickPresent(GLFW_JOYSTICK_1)){
+        std::cout << "Joystick present" << std::endl;
+
+        //gamepad(xbox controller)
+        if(glfwJoystickIsGamepad(joystickID)){
+            GLFWgamepadstate state;  
+            if(glfwGetGamepadState(GLFW_JOYSTICK_1, &state)){
+                std::cout << "Input Connected" <<std::endl;
+
+                float leftX = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+                float leftY = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+
+                float rightX= -state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+                float rightY= state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+                if (instance && instance->callbacks) {
+                    instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY);
+                }
+
+            }
+        }
+        //other(transmitter)
+        else{
+
+            //not gamepad 
+        }
+    }
+
+}
+
