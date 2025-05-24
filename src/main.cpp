@@ -131,6 +131,31 @@ public:
         float shininess;
     };
 
+    //drone struct with attributes and update
+    struct Drone {
+       vec3 position = vec3(0.0f); 
+       quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
+       vec3 velocity = vec3(0.0f);
+       vec3 acceleration = vec3(0.0f);
+       float mass = 250.0f;
+       float throttle = 0.0;
+
+       void update(float dt){
+            vec3 up = orientation * vec3(0, 1, 0);
+            vec3 thrust = up * (throttle * 28000.0f); //Max thrust 20N
+           
+            cout << thrust.y << endl;
+            vec3 gravity = vec3(0, -35.0f, 0);
+            vec3 netForce = thrust + (gravity * mass);
+            acceleration = netForce/mass;
+
+            velocity += acceleration * dt;
+            velocity *= .99f;
+            position += velocity * dt;
+
+       }
+    };
+
 
     Material Material1 = {
         vec3(0.046f, 0.046f, 0.045f),  // ambient (dim gray)
@@ -165,6 +190,7 @@ public:
     vec3 gMax;
 
 
+    Drone drone;
     glm::quat orientation = glm::quat(1, 0, 0, 0);
     float phi = 0.0f;
     float theta = PI/2;
@@ -262,18 +288,18 @@ public:
         float yawDelta   = -leftX * .07;
         float pitchDelta =  rightY * .07;
         float rollDelta  =  rightX * .07;
+        drone.throttle = (leftY+1)/2;
 
         // Create quaternions around local axes (apply roll → pitch → yaw)
-        // IMPORTANT: Order matters! Right-hand rule applies.
         glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
         glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
         glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
-
         // Compose rotation in drone's local frame
-        orientation = orientation * qYaw * qPitch * qRoll;
-        orientation = glm::normalize(orientation);
+        drone.orientation = drone.orientation * qYaw * qPitch * qRoll;
+        drone.orientation = glm::normalize(drone.orientation);
 
     }
+
 
     /*
      * Regular controls
@@ -294,10 +320,22 @@ public:
     */
 
 
-    void updateCamera(shared_ptr<MatrixStack> &view){
-        vec3 eye = vec3(0.0f, 0.0f, 0.0f); // fixed for now, or add movement
-        vec3 forward = orientation * vec3(0.0f, 0.0f, -1.0f);
-        vec3 up      = orientation * vec3(0.0f, 1.0f,  0.0f);
+    float calculateDeltaTime(){
+        using clock = chrono::high_resolution_clock;
+        static auto lastTime = clock::now();
+
+        auto currentTime = clock::now();
+        chrono::duration<float> delta = currentTime - lastTime;
+        lastTime = currentTime;
+
+        return delta.count();
+    }
+
+    void updateCamera(shared_ptr<MatrixStack> &view, 
+            vec3 drone_position, quat drone_orientation){
+        vec3 eye = drone_position;
+        vec3 forward = drone_orientation* vec3(0.0f, 0.0f, -1.0f);
+        vec3 up      = drone_orientation* vec3(0.0f, 1.0f,  0.0f);
         //to where camera is 
         view->lookAt(eye, eye+forward, up);
     }
@@ -958,7 +996,7 @@ public:
 		// View is global translation along negative z for now
 		View->pushMatrix();
 		View->loadIdentity();
-        updateCamera(View);
+        updateCamera(View, drone.position, drone.orientation);
         
 
         //offload this to function
@@ -1391,8 +1429,6 @@ public:
 
 
 
-
-
 		//switch shaders to the texture mapping shader and draw the ground
 		texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -1450,9 +1486,13 @@ int main(int argc, char *argv[])
 	// Loop until the user closes the window.
 	while (! glfwWindowShouldClose(windowManager->getHandle()))
 	{
+        float dt = application->calculateDeltaTime();
+        dt = std::fmin(dt, 0.03);
+
+        application->drone.update(dt);
 		// Render scene.
 		application->render();
-
+    
         windowManager->pollGamepadInput();
 		// Swap front and back buffers.
 		glfwSwapBuffers(windowManager->getHandle());

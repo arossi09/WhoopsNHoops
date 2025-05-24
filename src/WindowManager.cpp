@@ -129,16 +129,13 @@ void WindowManager::scroll_callback(GLFWwindow * window, double in_deltaX, doubl
 void WindowManager::pollGamepadInput(){
     int joystickID = GLFW_JOYSTICK_1;
     if(glfwJoystickPresent(GLFW_JOYSTICK_1)){
-        std::cout << "Joystick present" << std::endl;
 
         //gamepad(xbox controller)
         if(glfwJoystickIsGamepad(joystickID)){
             GLFWgamepadstate state;  
             if(glfwGetGamepadState(GLFW_JOYSTICK_1, &state)){
-                std::cout << "Input Connected" <<std::endl;
-
                 float leftX = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
-                float leftY = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+                float leftY = -state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
 
                 float rightX= -state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
                 float rightY= state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
@@ -150,8 +147,23 @@ void WindowManager::pollGamepadInput(){
         }
         //other(transmitter)
         else{
+            int count;
+            const float *axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &count);
 
-            //not gamepad 
+            if(count == 0 || !axes){
+                std::cerr << "Error joystick detected, axes not detected!" << std::endl;
+                return;
+            }
+            float rightX = -axes[0];
+            float rightY = -axes[1];
+
+            float leftX = axes[3];
+            float leftY = -axes[2];
+
+
+            if(instance && instance->callbacks){
+                instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY);
+            }
         }
     }
 
