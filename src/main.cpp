@@ -139,13 +139,14 @@ public:
        vec3 acceleration = vec3(0.0f);
        float mass = 250.0f;
        float throttle = 0.0;
+       float camera_title_angle = 25;
 
        void update(float dt){
             vec3 up = orientation * vec3(0, 1, 0);
             vec3 thrust = up * (throttle * 28000.0f); //Max thrust 20N
            
             cout << thrust.y << endl;
-            vec3 gravity = vec3(0, -35.0f, 0);
+            vec3 gravity = vec3(0, -45.0f, 0);
             vec3 netForce = thrust + (gravity * mass);
             acceleration = netForce/mass;
 
@@ -285,6 +286,8 @@ public:
         //leftY throttle
         //
         //*/
+        
+        //turn controller axie location into drone movement data
         float yawDelta   = -leftX * .07;
         float pitchDelta =  rightY * .07;
         float rollDelta  =  rightX * .07;
@@ -332,10 +335,17 @@ public:
     }
 
     void updateCamera(shared_ptr<MatrixStack> &view, 
-            vec3 drone_position, quat drone_orientation){
+            vec3 drone_position, quat drone_orientation, float drone_camera_angle){
+
+       
+        //rotate around x axis to pitch
+        quat cameraPitch = angleAxis(radians(drone_camera_angle), vec3(1, 0, 0));
+
+        quat cameraOrientation = drone_orientation * cameraPitch;
+
         vec3 eye = drone_position;
-        vec3 forward = drone_orientation* vec3(0.0f, 0.0f, -1.0f);
-        vec3 up      = drone_orientation* vec3(0.0f, 1.0f,  0.0f);
+        vec3 forward = cameraOrientation* vec3(0.0f, 0.0f, -1.0f);
+        vec3 up      = cameraOrientation* vec3(0.0f, 1.0f,  0.0f);
         //to where camera is 
         view->lookAt(eye, eye+forward, up);
     }
@@ -996,7 +1006,7 @@ public:
 		// View is global translation along negative z for now
 		View->pushMatrix();
 		View->loadIdentity();
-        updateCamera(View, drone.position, drone.orientation);
+        updateCamera(View, drone.position, drone.orientation, drone.camera_title_angle);
         
 
         //offload this to function
