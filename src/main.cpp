@@ -6,14 +6,15 @@
 
 
 
+
 //I could make a shape array to load each shape and then have enums
 //for the index with the name being the index for that object
 //TODO 
 //figure out sensitivity for the camera and stuff
-//implement physics
 //make it so the obstacles are cell shaded solid colors
 //make it so that there is function to draw silhoutes via cpu with 
 
+//look further into quaternions and how they work
 
 #include <iostream>
 #include <glad/glad.h>
@@ -141,19 +142,20 @@ public:
        float throttle = 0.0;
        float camera_title_angle = 25;
 
+       //calculate drone physics
        void update(float dt){
             vec3 up = orientation * vec3(0, 1, 0);
-            vec3 thrust = up * (throttle * 28000.0f); //Max thrust 20N
-           
-            cout << thrust.y << endl;
+            vec3 thrust = up * (throttle * 28000.0f); //Max thrust in N
+          
+            //prob have to fix this by balancing mass and thrust instead
             vec3 gravity = vec3(0, -45.0f, 0);
             vec3 netForce = thrust + (gravity * mass);
             acceleration = netForce/mass;
 
+            //calculate the position through acceleration & velocity
             velocity += acceleration * dt;
             velocity *= .99f;
             position += velocity * dt;
-
        }
     };
 
@@ -291,9 +293,10 @@ public:
         float yawDelta   = -leftX * .07;
         float pitchDelta =  rightY * .07;
         float rollDelta  =  rightX * .07;
+        //clamp throttle [0, 1]
         drone.throttle = (leftY+1)/2;
 
-        // Create quaternions around local axes (apply roll → pitch → yaw)
+        // Create quaternions around local axes (apply roll -> pitch ->  yaw)
         glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
         glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
         glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
@@ -334,9 +337,9 @@ public:
         return delta.count();
     }
 
+    //update camera location and orrientation based off drone
     void updateCamera(shared_ptr<MatrixStack> &view, 
             vec3 drone_position, quat drone_orientation, float drone_camera_angle){
-
        
         //rotate around x axis to pitch
         quat cameraPitch = angleAxis(radians(drone_camera_angle), vec3(1, 0, 0));
@@ -1077,6 +1080,8 @@ public:
             Model->translate(vec3(0, 2, 0));
             Model->scale(vec3(2, 2, 2));
 
+
+
             //cylinder  in front
             Model->pushMatrix();
                 texture3->bind(texProg->getUniform("Texture0"));
@@ -1263,6 +1268,7 @@ public:
                 pallet->draw(texProg);
             Model->popMatrix();
 
+            //walls left side
             Model->pushMatrix();
                 Model->translate(vec3(1, 0, -2));
                 //metalfence right side most left
@@ -1300,6 +1306,9 @@ public:
                 Model->popMatrix();
 
 
+
+
+
                 //walllong right most left
                 Model->pushMatrix();
                     texture10->bind(texProg->getUniform("Texture0"));
@@ -1313,7 +1322,73 @@ public:
 
                 Model->pushMatrix();
                     texture10->bind(texProg->getUniform("Texture0"));
-                    Model->translate(vec3(38, 2, 7.5f));
+                    Model->translate(vec3(38.5f, 2, 7.5f));
+                    Model->rotate(PI/2, vec3(0, 1, 0));
+                    Model->scale(vec3(3.5f, 3.5f, 3.5f));
+                    resize_and_center(walllong->min, walllong->max, Model);
+                    setModel(texProg, Model);
+                    walllong->draw(texProg);
+                Model->popMatrix();
+
+            Model->popMatrix();
+
+
+            //walls right side
+            Model->pushMatrix();
+                Model->translate(vec3(1, 0, -2));
+                //metalfence right side most left
+                Model->pushMatrix();
+                    texture9->bind(texProg->getUniform("Texture0"));
+                    Model->translate(vec3(-40, 2, 1));
+                    Model->rotate(PI/2, vec3(0, 1, 0));
+                    Model->scale(vec3(3, 3, 3));
+                    resize_and_center(metalfence->min, metalfence->max, Model);
+                    setModel(texProg, Model);
+                    metalfence->draw(texProg);
+                    Model->pushMatrix();
+                        texture9->bind(texProg->getUniform("Texture0"));
+                        Model->translate(vec3(8.5f, 0, 0));
+                        setModel(texProg, Model);
+                        metalfence->draw(texProg);
+                    Model->popMatrix();
+                Model->popMatrix();
+
+
+                Model->pushMatrix();
+                    texture9->bind(texProg->getUniform("Texture0"));
+                    Model->translate(vec3(-40, 2, 14));
+                    Model->rotate(PI/2, vec3(0, 1, 0));
+                    Model->scale(vec3(3, 3, 3));
+                    resize_and_center(metalfence->min, metalfence->max, Model);
+                    setModel(texProg, Model);
+                    metalfence->draw(texProg);
+                    Model->pushMatrix();
+                        texture9->bind(texProg->getUniform("Texture0"));
+                        Model->translate(vec3(-8.5f, 0, 0));
+                        setModel(texProg, Model);
+                        metalfence->draw(texProg);
+                    Model->popMatrix();
+                Model->popMatrix();
+
+
+
+
+
+                //walllong right most left
+                Model->pushMatrix();
+                    //cement wall next to light
+                    texture10->bind(texProg->getUniform("Texture0"));
+                    Model->translate(vec3(-39, 2, -10.75));
+                    Model->rotate(PI/3, vec3(0, 1, 0));
+                    Model->scale(vec3(3.5f, 3.5f, 3.5f));
+                    resize_and_center(walllong->min, walllong->max, Model);
+                    setModel(texProg, Model);
+                    walllong->draw(texProg);
+                Model->popMatrix();
+
+                Model->pushMatrix();
+                    texture10->bind(texProg->getUniform("Texture0"));
+                    Model->translate(vec3(-40.5f, 2, 7.5f));
                     Model->rotate(PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3.5f, 3.5f, 3.5f));
                     resize_and_center(walllong->min, walllong->max, Model);
