@@ -10,14 +10,14 @@
 //I could make a shape array to load each shape and then have enums
 //for the index with the name being the index for that object
 //TODO 
-//figure out sensitivity for the camera and stuff
 //make it so the obstacles are cell shaded solid colors
 //make it so that there is function to draw silhoutes via cpu with 
-
+//Text generation using a namespace
 //look further into quaternions and how they work
 
 #include <iostream>
 #include <glad/glad.h>
+#include <freetype2/ft2build.h> // might cause issues
 
 #include "GLSL.h"
 #include "Program.h"
@@ -25,6 +25,7 @@
 #include "MatrixStack.h"
 #include "WindowManager.h"
 #include "Texture.h"
+#include FT_FREETYPE_H
 
 #define PI 3.14
 
@@ -89,6 +90,10 @@ public:
 	shared_ptr<Shape> crate;
 
 	shared_ptr<Shape> scaffolding;
+
+	shared_ptr<Shape> wire;
+
+	shared_ptr<Shape> stair_build;
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
 	GLuint GrndBuffObj, GrndNorBuffObj, GrndTexBuffObj, GIndxBuffObj;
 	int g_GiboLen;
@@ -125,6 +130,8 @@ public:
 
     shared_ptr<Texture> texture13;
 
+    shared_ptr<Texture> texture14;
+
     struct Material{
         vec3 ambient;
         vec3 diffuse;
@@ -143,7 +150,7 @@ public:
        float camera_title_angle = 25;
 
        //calculate drone physics
-       void update(float dt){
+       void updatePosition(float dt){
             vec3 up = orientation * vec3(0, 1, 0);
             vec3 thrust = up * (throttle * 28000.0f); //Max thrust in N
           
@@ -156,6 +163,15 @@ public:
             velocity += acceleration * dt;
             velocity *= .99f;
             position += velocity * dt;
+       }
+
+       void updateOrientation(float rollDelta, float pitchDelta, float yawDelta){
+           // Create quaternions around local axes (apply roll -> pitch ->  yaw)
+           glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
+           glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
+           glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
+           orientation = orientation * qYaw * qPitch * qRoll;
+           orientation = glm::normalize(orientation);
        }
     };
 
@@ -194,10 +210,14 @@ public:
 
 
     Drone drone;
-    glm::quat orientation = glm::quat(1, 0, 0, 0);
     float phi = 0.0f;
     float theta = PI/2;
     float roll = 0;
+
+    //gamepad 
+    float yawDelta = 0;
+    float pitchDelta = 0;
+    float rollDelta = 0;
 
 	//global data (larger program should be encapsulated)
 	float gRot = 0;
@@ -221,14 +241,30 @@ public:
 		}
 		//update global camera rotate
 		if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-			gRot -= 0.2;
+			yawDelta = 0.5;
+		}
+
+		if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
+			yawDelta = 0;
 		}
 		if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-			gRot += 0.2;
+			yawDelta = -.5f;
 		}
+		if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
+			yawDelta = 0;
+		}
+
+		if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+			drone.throttle= 1;
+		}
+
+		if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
+			drone.throttle= .45;
+		}
+
 		//update camera height
 		if (key == GLFW_KEY_S && action == GLFW_PRESS){
-			gCamH  += 1.25;
+		    drone.throttle = 0;	
 		}
 		if (key == GLFW_KEY_F && action == GLFW_PRESS){
 			gCamH  -= 1.25;
@@ -251,6 +287,8 @@ public:
 		if (key == GLFW_KEY_Z && action == GLFW_RELEASE) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		}
+
+        drone.updateOrientation(rollDelta, pitchDelta, yawDelta);
 	} 
 
 	void mouseCallback(GLFWwindow *window, int button, int action, int mods)
@@ -271,6 +309,7 @@ public:
        if(phi < -80) phi = -80;
     }
 
+
     //gather the controller inputs on callback
     void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY){
         /*
@@ -290,20 +329,12 @@ public:
         //*/
         
         //turn controller axie location into drone movement data
-        float yawDelta   = -leftX * .07;
-        float pitchDelta =  rightY * .07;
-        float rollDelta  =  rightX * .07;
+        yawDelta   = -leftX * .07;
+        pitchDelta =  rightY * .07;
+        rollDelta  =  rightX * .07;
         //clamp throttle [0, 1]
         drone.throttle = (leftY+1)/2;
-
-        // Create quaternions around local axes (apply roll -> pitch ->  yaw)
-        glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
-        glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
-        glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
-        // Compose rotation in drone's local frame
-        drone.orientation = drone.orientation * qYaw * qPitch * qRoll;
-        drone.orientation = glm::normalize(drone.orientation);
-
+        drone.updateOrientation(rollDelta, pitchDelta, yawDelta);
     }
 
 
@@ -543,6 +574,15 @@ public:
   		texture13->setUnit(0);
   		texture13->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture13->setFiltering(GL_NEAREST, GL_NEAREST);
+
+
+
+		texture14 = make_shared<Texture>();
+  		texture14->setFilename(resourceDirectory + "/stair_building.png");
+  		texture14->init();
+  		texture14->setUnit(0);
+  		texture14->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+        texture14->setFiltering(GL_NEAREST, GL_NEAREST);
 
 
 	}
@@ -793,6 +833,37 @@ public:
 		    scaffolding->createShape(TOshapesO[0]);
 			scaffolding->measure();
 			scaffolding->init();
+		}
+
+
+
+		vector<tinyobj::shape_t> TOshapesP;
+ 		vector<tinyobj::material_t> objMaterialsP;
+		//load in the mesh and make the shape(s)
+ 		rc = tinyobj::LoadObj(TOshapesP, objMaterialsP, errStr, (resourceDirectory + "/wire.obj").c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			
+			wire= make_shared<Shape>();
+		    wire->createShape(TOshapesP[0]);
+			wire->measure();
+			wire->init();
+		}
+
+
+		vector<tinyobj::shape_t> TOshapesQ;
+ 		vector<tinyobj::material_t> objMaterialsQ;
+		//load in the mesh and make the shape(s)
+ 		rc = tinyobj::LoadObj(TOshapesQ, objMaterialsQ, errStr, (resourceDirectory + "/stair_building.obj").c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			
+			stair_build= make_shared<Shape>();
+		    stair_build->createShape(TOshapesQ[0]);
+			stair_build->measure();
+			stair_build->init();
 		}
 
         //load in dummy.obj multi shape object
@@ -1501,15 +1572,30 @@ public:
                 scaffolding->draw(texProg);
             Model->popMatrix();
 
+
+            Model->pushMatrix();
+                resize_and_center(wire->min, wire->max, Model);
+                setModel(texProg, Model);
+                wire->draw(texProg);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+
+                texture14->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(0, 0, -10));
+                resize_and_center(stair_build->min, stair_build->max, Model);
+                setModel(texProg, Model);
+                stair_build->draw(texProg);
+            Model->popMatrix();
+
+
+
         Model->popMatrix();
 
 
         
         texProg->unbind();
-
-
-
-
 
 
 
@@ -1574,7 +1660,7 @@ int main(int argc, char *argv[])
         float dt = application->calculateDeltaTime();
         dt = std::fmin(dt, 0.03);
 
-        application->drone.update(dt);
+        application->drone.updatePosition(dt);
 		// Render scene.
 		application->render();
     

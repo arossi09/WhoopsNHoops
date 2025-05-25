@@ -18,6 +18,7 @@ file(GLOB_RECURSE GLSL "resources/*.glsl")
 
 include_directories("ext")
 include_directories("ext/glad/include")
+include_directories("/opt/homebrew/include/freetype2")
 
 # Set the executable.
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLSL})
@@ -37,15 +38,16 @@ if(NOT WIN32)
   # TODO: The following links may be uneeded. 
   if(APPLE)
     # Add required frameworks for GLFW.
-    target_link_libraries(${CMAKE_PROJECT_NAME} "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo")
+    target_link_libraries(${CMAKE_PROJECT_NAME} "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo" freetype)
   else()
     #Link the Linux OpenGL library
-    target_link_libraries(${CMAKE_PROJECT_NAME} "GL" "dl")
+    target_link_libraries(${CMAKE_PROJECT_NAME} "GL" "dl" freetype)
   endif()
 
 else()
 
   # Link OpenGL on Windows
   target_link_libraries(${CMAKE_PROJECT_NAME} opengl32.lib)
+  target_link_libraries(${CMAKE_PROJECT_NAME} freetype)
 
 endif()
