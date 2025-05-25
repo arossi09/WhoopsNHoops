@@ -1075,7 +1075,7 @@ public:
 
 		// Apply perspective projection.
 		Projection->pushMatrix();
-		Projection->perspective(45.0f, aspect, 0.01f, 400.0f);
+		Projection->perspective(45.5f, aspect, 0.01f, 400.0f);
 
 		// View is global translation along negative z for now
 		View->pushMatrix();
@@ -1260,7 +1260,7 @@ public:
             //guard rail middle left1
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(0, -.5f, -18));
+                Model->translate(vec3(0, -.35f, -18));
                 Model->rotate(-PI/2.1, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
                 resize_and_center(guardrail->min, guardrail->max, Model);
@@ -1272,7 +1272,7 @@ public:
             //guard rail middle right
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(12, -.5f, -18));
+                Model->translate(vec3(12, -.35f, -18));
                 Model->rotate(-PI/1.9, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
                 resize_and_center(guardrail->min, guardrail->max, Model);
@@ -1284,7 +1284,7 @@ public:
             //guard rail most right
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(28, -.5f, -18));
+                Model->translate(vec3(28, -.35f, -18));
                 Model->rotate(-PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
                 resize_and_center(guardrail->min, guardrail->max, Model);
@@ -1296,7 +1296,7 @@ public:
             //guard rail most left
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(-30, -.5f, -18));
+                Model->translate(vec3(-30, -.35f, -18));
                 Model->rotate(-PI/2.1, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
                 resize_and_center(guardrail->min, guardrail->max, Model);
@@ -1308,7 +1308,7 @@ public:
             //guard rail left
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(-18, -.5f, -18));
+                Model->translate(vec3(-18, -.35f, -18));
                 Model->rotate(-PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
                 resize_and_center(guardrail->min, guardrail->max, Model);
@@ -1580,10 +1580,12 @@ public:
             Model->popMatrix();
 
 
+            //stair building 
             Model->pushMatrix();
-
                 texture14->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(0, 0, -10));
+                Model->translate(vec3(13, -2, 30));
+                Model->rotate(-PI/2, (vec3(0, 1, 0)));
+                Model->scale(vec3(7, 7, 7));
                 resize_and_center(stair_build->min, stair_build->max, Model);
                 setModel(texProg, Model);
                 stair_build->draw(texProg);
