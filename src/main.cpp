@@ -11,13 +11,12 @@
 //for the index with the name being the index for that object
 //TODO 
 //make it so the obstacles are cell shaded solid colors
-//make it so that there is function to draw silhoutes via cpu with 
 //Text generation using a namespace
 //look further into quaternions and how they work
+//import objects as multishape so that bounding boxes work correctly
 
 #include <iostream>
 #include <glad/glad.h>
-#include <freetype2/ft2build.h> // might cause issues
 
 #include "GLSL.h"
 #include "Program.h"
@@ -25,7 +24,7 @@
 #include "MatrixStack.h"
 #include "WindowManager.h"
 #include "Texture.h"
-#include FT_FREETYPE_H
+#include "AABB.h"
 
 #define PI 3.14
 
@@ -132,6 +131,15 @@ public:
 
     shared_ptr<Texture> texture14;
 
+
+    shared_ptr<AABB> groundBox;
+    shared_ptr<AABB> tiledwallBox1;
+    shared_ptr<AABB> tiledwallBox2;
+    shared_ptr<AABB> palletBox;
+
+    
+
+
     struct Material{
         vec3 ambient;
         vec3 diffuse;
@@ -141,7 +149,8 @@ public:
 
     //drone struct with attributes and update
     struct Drone {
-       vec3 position = vec3(0.0f); 
+       vec3 position = vec3(0.0f, 1.0f, 0.0f); 
+       vec3 previousPosition = vec3(0.0f);
        quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
        vec3 velocity = vec3(0.0f);
        vec3 acceleration = vec3(0.0f);
@@ -149,8 +158,14 @@ public:
        float throttle = 0.0;
        float camera_title_angle = 25;
 
+       AABB getAABB() const {
+           float halfSize = .3f;  
+           return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
+       }
+
        //calculate drone physics
        void updatePosition(float dt){
+            previousPosition = position;
             vec3 up = orientation * vec3(0, 1, 0);
             vec3 thrust = up * (throttle * 28000.0f); //Max thrust in N
           
@@ -158,6 +173,7 @@ public:
             vec3 gravity = vec3(0, -45.0f, 0);
             vec3 netForce = thrust + (gravity * mass);
             acceleration = netForce/mass;
+
 
             //calculate the position through acceleration & velocity
             velocity += acceleration * dt;
@@ -174,6 +190,7 @@ public:
            orientation = glm::normalize(orientation);
        }
     };
+
 
 
     Material Material1 = {
@@ -207,6 +224,7 @@ public:
 	//example data that might be useful when trying to compute bounds on multi-shape
 	vec3 gMin;
     vec3 gMax;
+    vector <shared_ptr<AABB>> allBoxes;
 
 
     Drone drone;
@@ -456,6 +474,7 @@ public:
         silhoutteProg->addUniform("P");
         silhoutteProg->addUniform("V");
         silhoutteProg->addUniform("M");
+        silhoutteProg->addAttribute("vertPos");
 
 
 		//read in a load the texture
@@ -644,11 +663,14 @@ public:
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
-			
 			ground= make_shared<Shape>();
 			ground->createShape(TOshapesC[0]);
 			ground->measure();
 			ground->init();
+            groundBox = make_shared<AABB>(ground->min, ground->max);
+            groundBox->init();
+            allBoxes.push_back(groundBox);
+
 		}
 
 
@@ -743,6 +765,8 @@ public:
 		    pallet->createShape(TOshapesI[0]);
 			pallet->measure();
 			pallet->init();
+            palletBox = make_shared<AABB>(pallet->min, pallet->max);
+            allBoxes.push_back(palletBox);
 		}
 
 
@@ -788,6 +812,10 @@ public:
 		    tiledwall->createShape(TOshapesL[0]);
 			tiledwall->measure();
 			tiledwall->init();
+            tiledwallBox1 = make_shared<AABB>(tiledwall->min, tiledwall->max);
+            tiledwallBox2 = make_shared<AABB>(tiledwall->min, tiledwall->max);
+            allBoxes.push_back(tiledwallBox1);
+            allBoxes.push_back(tiledwallBox2);
 		}
 
 
@@ -1020,6 +1048,40 @@ public:
   		}
 	}
 
+    void handleCollision(){
+        AABB droneBox = drone.getAABB();
+        for(const std::shared_ptr<AABB>&box : allBoxes){
+            //if(distance(drone.position, box->getCenter())< 5){
+            if(droneBox.intersects(*box)){
+                vec3 delta = droneBox.getCenter() - box->getCenter();
+                vec3 overlap = box->getSize() * 0.5f + droneBox.getSize() * 0.5f - abs(delta);
+
+                // Compute approximate collision normal
+                vec3 penetrationDirection;
+                if (overlap.x < overlap.y && overlap.x < overlap.z)
+                    penetrationDirection = vec3(sign(delta.x), 0, 0);
+                else if (overlap.y < overlap.z)
+                    penetrationDirection = vec3(0, sign(delta.y), 0);
+                else
+                    penetrationDirection = vec3(0, 0, sign(delta.z));
+
+                // Reflect or slide velocity
+                vec3 velocityNormal = dot(drone.velocity, penetrationDirection) * penetrationDirection;
+                vec3 velocityTangent = drone.velocity - velocityNormal;
+
+                float restitution = 0.4f; // Tune for bounciness
+                drone.velocity = -restitution * velocityNormal + velocityTangent;
+
+                // Move drone out of collision
+                float pushback = 0.01f;
+                drone.position += penetrationDirection * pushback; break;
+            }else{
+                cout << "Not Intersect!" << endl;
+            }
+            // }
+        }
+    }
+
 	/* helper function to set model trasnforms */
   	void SetModel(vec3 trans, float rotY, float rotX, float sc, shared_ptr<Program> curS) {
   		mat4 Trans = glm::translate( glm::mat4(1.0f), trans);
@@ -1100,6 +1162,11 @@ public:
             sphere->draw(texProg);
         Model->popMatrix();
         texProg->unbind();
+
+        silhoutteProg->bind();
+		glUniformMatrix4fv(silhoutteProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
+		glUniformMatrix4fv(silhoutteProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+        silhoutteProg->unbind();
 
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -1201,20 +1268,20 @@ public:
                 Model->scale(vec3(40, 10, 40));
                 texture2->bind(texProg->getUniform("Texture0"));
                 resize_and_center(ground->min, ground->max, Model);
+                groundBox->transform(Model->topMatrix());
+                /*
+                texProg->unbind();
+                silhoutteProg->bind();
+                setModel(silhoutteProg, Model);
+                groundBox->draw(silhoutteProg);
+                silhoutteProg->unbind();
+                texProg->bind();
+                */
                 setModel(texProg, Model);
                 ground->draw(texProg);
             Model->popMatrix();
 
 
-            Model->pushMatrix();
-                Model->translate(vec3(0, -5, 60));
-                Model->rotate(PI/2, vec3(0, 1, 0));
-                Model->scale(vec3(40, 10, 40));
-                texture2->bind(texProg->getUniform("Texture0"));
-                resize_and_center(ground->min, ground->max, Model);
-                setModel(texProg, Model);
-                ground->draw(texProg);
-            Model->popMatrix();
 
 
             //house to left
@@ -1325,6 +1392,7 @@ public:
                 Model->scale(vec3(2, 2.5f, 2));
                 resize_and_center(pallet->min, pallet->max, Model);
                 setModel(texProg, Model);
+                palletBox->transform(Model->topMatrix());
                 pallet->draw(texProg);
             Model->popMatrix();
 
@@ -1477,6 +1545,7 @@ public:
                 texture11->bind(texProg->getUniform("Texture0"));
                 resize_and_center(tiledwall->min, tiledwall->max, Model);
                 setModel(texProg, Model);
+                tiledwallBox1->transform(Model->topMatrix());
                 tiledwall->draw(texProg);
             Model->popMatrix();
 
@@ -1488,6 +1557,7 @@ public:
                 texture11->bind(texProg->getUniform("Texture0"));
                 resize_and_center(tiledwall->min, tiledwall->max, Model);
                 setModel(texProg, Model);
+                tiledwallBox2->transform(Model->topMatrix());
                 tiledwall->draw(texProg);
             Model->popMatrix();
 
@@ -1583,7 +1653,7 @@ public:
             //stair building 
             Model->pushMatrix();
                 texture14->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(13, -2, 30));
+                Model->translate(vec3(13, -4, 30));
                 Model->rotate(-PI/2, (vec3(0, 1, 0)));
                 Model->scale(vec3(7, 7, 7));
                 resize_and_center(stair_build->min, stair_build->max, Model);
@@ -1664,6 +1734,7 @@ int main(int argc, char *argv[])
 
         application->drone.updatePosition(dt);
 		// Render scene.
+        application->handleCollision();
 		application->render();
     
         windowManager->pollGamepadInput();

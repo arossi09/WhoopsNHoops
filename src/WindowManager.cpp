@@ -158,7 +158,7 @@ void WindowManager::pollGamepadInput(){
             float rightY = -axes[1];
 
             float leftX = axes[3];
-            float leftY = -axes[2];
+            float leftY = axes[2];
 
 
             if(instance && instance->callbacks){
