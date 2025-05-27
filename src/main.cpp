@@ -181,6 +181,8 @@ public:
             position += velocity * dt;
        }
 
+       //we need this to be able to update the drones orientation based
+       //off the inputs from the controller
        void updateOrientation(float rollDelta, float pitchDelta, float yawDelta){
            // Create quaternions around local axes (apply roll -> pitch ->  yaw)
            glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
@@ -249,7 +251,7 @@ public:
     float cTheta = 0;
 	float eTheta = 0;
 	float hTheta = 0;
-    int MatToggle = 0;
+    int draw_boxes = 0;
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -289,8 +291,8 @@ public:
 		}
 
 
-		if (key == GLFW_KEY_M && action == GLFW_PRESS){
-            MatToggle = !MatToggle;
+		if (key == GLFW_KEY_B && action == GLFW_PRESS){
+            draw_boxes = !draw_boxes;
 		}
 
 		if (key == GLFW_KEY_Q && action == GLFW_PRESS){
@@ -766,6 +768,7 @@ public:
 			pallet->measure();
 			pallet->init();
             palletBox = make_shared<AABB>(pallet->min, pallet->max);
+            palletBox->init();
             allBoxes.push_back(palletBox);
 		}
 
@@ -814,6 +817,8 @@ public:
 			tiledwall->init();
             tiledwallBox1 = make_shared<AABB>(tiledwall->min, tiledwall->max);
             tiledwallBox2 = make_shared<AABB>(tiledwall->min, tiledwall->max);
+            tiledwallBox1->init();
+            tiledwallBox2->init();
             allBoxes.push_back(tiledwallBox1);
             allBoxes.push_back(tiledwallBox2);
 		}
@@ -1172,31 +1177,6 @@ public:
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
 		glUniform3f(prog->getUniform("lightPos"), 2.0+lightTrans, 2.0+lightTrans, 2.9+lightTrans);
-        if(MatToggle){
-            set_material_uniforms(prog, Material1);
-        }else{
-            set_material_uniforms(prog, Material2);
-        }
-   
-        /*
-        Model->pushMatrix();
-            Model->translate(vec3(0, 5, 20));
-            Model->rotate(-PI/2, vec3(0, 1, 0));
-            Model->scale(vec3(200, 200, 200));
-            setModel(prog, Model);
-            bunny->draw(prog);
-        Model->popMatrix();
-
-        Model->pushMatrix();
-            set_material_uniforms(prog, Material3);
-            Model->translate(vec3(-30, -3, 20));
-            Model->rotate(-PI/6, vec3(0, 1, 0));
-            Model->scale(vec3(200, 200, 200));
-            setModel(prog, Model);
-            bunny->draw(prog);
-        Model->popMatrix();
-        */
-
         prog->unbind();
         cellProg->bind();
 		glUniformMatrix4fv(cellProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -1269,14 +1249,6 @@ public:
                 texture2->bind(texProg->getUniform("Texture0"));
                 resize_and_center(ground->min, ground->max, Model);
                 groundBox->transform(Model->topMatrix());
-                /*
-                texProg->unbind();
-                silhoutteProg->bind();
-                setModel(silhoutteProg, Model);
-                groundBox->draw(silhoutteProg);
-                silhoutteProg->unbind();
-                texProg->bind();
-                */
                 setModel(texProg, Model);
                 ground->draw(texProg);
             Model->popMatrix();
@@ -1392,8 +1364,8 @@ public:
                 Model->scale(vec3(2, 2.5f, 2));
                 resize_and_center(pallet->min, pallet->max, Model);
                 setModel(texProg, Model);
-                palletBox->transform(Model->topMatrix());
                 pallet->draw(texProg);
+                palletBox->transform(Model->topMatrix());
             Model->popMatrix();
 
             //pallet on floor
@@ -1669,7 +1641,17 @@ public:
         
         texProg->unbind();
 
+        //draw all BBox
+        //
+        if(draw_boxes){
+            silhoutteProg->bind();
+            for(const std::shared_ptr<AABB>&box : allBoxes){
+               box->draw(silhoutteProg); 
+            }
+            silhoutteProg->unbind();
+        }
 
+        
 
 
 		//switch shaders to the texture mapping shader and draw the ground

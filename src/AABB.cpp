@@ -24,30 +24,25 @@ bool AABB::intersects(const AABB& other) const {
 
 void AABB::transform(const glm::mat4& model){
     std::vector<glm::vec3> corners = getOriginalCorners();
-    std::vector<glm::vec3> transformed;
-    transformed.reserve(8);
 
     glm::vec3 newMin = glm::vec3(model *glm::vec4(corners[0], 1.0f));
     glm::vec3 newMax = newMin;
-    transformed.push_back(newMin);
 
-
-    for(int i = 1; i < 8; i++){
+    for(int i = 0; i < 8; i++){
         glm::vec3 pt = glm::vec3(model * glm::vec4(corners[i], 1.0f));
-        transformed.push_back(pt); 
         newMin = glm::min(newMin, pt);
         newMax = glm::max(newMax, pt);
     }
 
     min = newMin;
     max = newMax;
+    //update new corners for draw
+    corners = getCorners();
 
-    /*
+
     glBindBuffer(GL_ARRAY_BUFFER, posBufID);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * 8, transformed.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * 8, corners.data());
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    */
-
 }
 
 
@@ -64,6 +59,21 @@ std::vector<glm::vec3> AABB::getOriginalCorners() const {
     };
 }
 
+
+std::vector<glm::vec3> AABB::getCorners() const{
+    return {
+        {min.x, min.y, min.z},
+        {max.x, min.y, min.z},
+        {max.x, max.y, min.z},
+        {min.x, max.y, min.z},
+        {min.x, min.y, max.z},
+        {max.x, min.y, max.z},
+        {max.x, max.y, max.z},
+        {min.x, max.y, max.z}
+    };
+
+}
+
 void AABB::init(){
     corners = {
         {min.x, min.y, min.z},
@@ -77,14 +87,10 @@ void AABB::init(){
     };
 
     indices = {
-        0, 1, 2,  2, 3, 0,
-        4, 5, 6,  6, 7, 4,
-        0, 4, 5,  5, 1, 0,
-        3, 2, 6,  6, 7, 3,
-        0, 3, 7,  7, 4, 0,
-        1, 5, 6,  6, 2, 1
+        0, 1, 1, 2, 2, 3, 3, 0, // bottom square
+        4, 5, 5, 6, 6, 7, 7, 4, // top square
+        0, 4, 1, 5, 2, 6, 3, 7  // vertical edges
     };
-
     glGenVertexArrays(1, &vaoID);
     glBindVertexArray(vaoID);
 
@@ -103,13 +109,12 @@ void AABB::init(){
 
 void AABB::draw(const std::shared_ptr<Program> prog){
     glBindVertexArray(vaoID);
-
     int h_pos = prog->getAttribute("vertPos");
     GLSL::enableVertexAttribArray(h_pos);
     glBindBuffer(GL_ARRAY_BUFFER, posBufID);
     glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eleBufID);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_LINES, indices.size(), GL_UNSIGNED_INT, 0);
 
     GLSL::disableVertexAttribArray(h_pos);
     glBindVertexArray(0);
