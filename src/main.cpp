@@ -14,6 +14,8 @@
 //Text generation using a namespace
 //look further into quaternions and how they work
 //import objects as multishape so that bounding boxes work correctly
+//implement OBB
+//
 
 #include <iostream>
 #include <glad/glad.h>
@@ -52,7 +54,7 @@ public:
 
 	std::shared_ptr<Program> cellProg;
 
-	std::shared_ptr<Program> silhoutteProg;
+	std::shared_ptr<Program> bboxProg;
 
 	//Our shader program for textures
 	std::shared_ptr<Program> texProg;
@@ -137,6 +139,36 @@ public:
     shared_ptr<AABB> tiledwallBox2;
     shared_ptr<AABB> palletBox;
 
+    vector <shared_ptr<Shape>> shapes;
+
+    //example data that might be useful when trying to compute bounds on multi-shape
+    vec3 gMin;
+    vec3 gMax;
+    vector <shared_ptr<AABB>> allBoxes;
+
+
+    float phi = 0.0f;
+    float theta = PI/2;
+    float roll = 0;
+
+    //gamepad 
+    float yawDelta = 0;
+    float pitchDelta = 0;
+    float rollDelta = 0;
+
+    //global data (larger program should be encapsulated)
+    float gRot = 0;
+    float gCamH = 0;
+    float sensitivity = .1 ;
+    float radius = 1.0f;
+    //animation data
+    float lightTrans = 0;
+    float gTrans = -3;
+    float sTheta = 0;
+    float cTheta = 0;
+    float eTheta = 0;
+    float hTheta = 0;
+    int draw_boxes = 0;
     
 
 
@@ -146,6 +178,23 @@ public:
         vec3 specular;
         float shininess;
     };
+
+    struct multiModel{
+        vector<shared_ptr<Shape>> shapes;
+        vector<shared_ptr<AABB>> boxes;
+        vec3 gMin;
+        vec3 gMax;
+        void draw_and_collide(shared_ptr<Program> prog, mat4 Model){
+            if(shapes.size() == boxes.size()){
+                for(int i = 0; i < shapes.size(); i++){
+                   shapes[i]->draw(prog); 
+                   boxes[i]->transform(Model); 
+                }
+            }
+        }
+    };
+
+    multiModel stair_building; 
 
     //drone struct with attributes and update
     struct Drone {
@@ -193,6 +242,7 @@ public:
        }
     };
 
+    Drone drone;
 
 
     Material Material1 = {
@@ -221,37 +271,6 @@ public:
 
 
         //stack for shapes
-    vector <shared_ptr<Shape>> shapes;
-
-	//example data that might be useful when trying to compute bounds on multi-shape
-	vec3 gMin;
-    vec3 gMax;
-    vector <shared_ptr<AABB>> allBoxes;
-
-
-    Drone drone;
-    float phi = 0.0f;
-    float theta = PI/2;
-    float roll = 0;
-
-    //gamepad 
-    float yawDelta = 0;
-    float pitchDelta = 0;
-    float rollDelta = 0;
-
-	//global data (larger program should be encapsulated)
-	float gRot = 0;
-	float gCamH = 0;
-    float sensitivity = .1 ;
-    float radius = 1.0f;
-	//animation data
-	float lightTrans = 0;
-	float gTrans = -3;
-	float sTheta = 0;
-    float cTheta = 0;
-	float eTheta = 0;
-	float hTheta = 0;
-    int draw_boxes = 0;
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -358,9 +377,6 @@ public:
     }
 
 
-    /*
-     * Regular controls
-    //with the phi and theta calculate the direction vectur and 
     void updateCamera(shared_ptr<MatrixStack> &view){
         vec3 direction;
         vec3 eye = vec3(0, 10, -30);
@@ -374,7 +390,6 @@ public:
         //to where camera is 
         view->lookAt(eye, eye+direction, vec3(0, 1, 0));
     }
-    */
 
 
     float calculateDeltaTime(){
@@ -469,14 +484,13 @@ public:
 		texProg->addAttribute("vertNor");
 		texProg->addAttribute("vertTex");
 
-        silhoutteProg = make_shared<Program>();
-        silhoutteProg->setVerbose(true);
-        silhoutteProg->setShaderNames(resourceDirectory + "/silhoutte_vert.glsl", resourceDirectory + "/silhoutte_frag.glsl");
-        silhoutteProg->init();
-        silhoutteProg->addUniform("P");
-        silhoutteProg->addUniform("V");
-        silhoutteProg->addUniform("M");
-        silhoutteProg->addAttribute("vertPos");
+        bboxProg = make_shared<Program>();
+        bboxProg->setVerbose(true);
+        bboxProg->setShaderNames(resourceDirectory + "/silhoutte_vert.glsl", resourceDirectory + "/silhoutte_frag.glsl");
+        bboxProg->init();
+        bboxProg->addUniform("P");
+        bboxProg->addUniform("V");
+        bboxProg->addAttribute("vertPos");
 
 
 		//read in a load the texture
@@ -899,30 +913,38 @@ public:
 			stair_build->init();
 		}
 
-        //load in dummy.obj multi shape object
+
+        stair_building= loadMultiShape("/multi_shape_stair.obj", resourceDirectory);
+
+		//code to load in the ground plane (CPU defined data passed to GPU)
+		initGround();
+	}
+
+    multiModel loadMultiShape(const string &filepath, const string &resourceDirectory){
+        multiModel result;    
+
+		vector<tinyobj::shape_t> TOshapes;
+ 		vector<tinyobj::material_t> objMaterials;
+ 		string errStr;
+
         vec3 minBounds = vec3(numeric_limits<float>::max());
         vec3 maxBounds = vec3(-numeric_limits<float>::max());
-
-		vector<tinyobj::shape_t> TOshapes3;
- 		rc = tinyobj::LoadObj(TOshapes3, objMaterials, errStr, (resourceDirectory + "/wharehouse.obj").c_str());
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + filepath).c_str());
+       
 
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
-            //loop through the shapes and calculate the total bounding box for the entire
-            //model
-            for(size_t i = 0; i < TOshapes3.size(); i ++){
-
-
+            for(int i = 0; i <TOshapes.size(); i++ ){
                 auto shape = make_shared<Shape>();
-                shape->createShape(TOshapes3[i]);
+                shape->createShape(TOshapes[i]);
                 shape->measure();
                 shape->init();
-
-                //add each shape to a shape stack
-                shapes.push_back(shape);
-
-                //calculate min max from all
+                auto box = make_shared<AABB>(shape->min, shape->max);
+                box->init();
+                result.shapes.push_back(shape);
+                result.boxes.push_back(box);
+                allBoxes.push_back(box);
 
                 minBounds.x = std::min(minBounds.x, shape->min.x);
                 minBounds.y = std::min(minBounds.y, shape->min.y);
@@ -931,18 +953,13 @@ public:
                 maxBounds.x = std::max(maxBounds.x, shape->max.x);
                 maxBounds.y = std::max(maxBounds.y, shape->max.y);
                 maxBounds.z = std::max(maxBounds.z, shape->max.z);
-            }
-		}
+            } 
+        }
 
-		//read out information stored in the shape about its size - something like this...
-		//then do something with that information.....
-		gMin = minBounds;
-        gMax = maxBounds;
-
-
-		//code to load in the ground plane (CPU defined data passed to GPU)
-		initGround();
-	}
+        result.gMin = minBounds;
+        result.gMax = maxBounds;
+        return result;
+    }
 
 	//directly pass quad for the ground to the GPU
 	void initGround() {
@@ -1080,10 +1097,7 @@ public:
                 // Move drone out of collision
                 float pushback = 0.01f;
                 drone.position += penetrationDirection * pushback; break;
-            }else{
-                cout << "Not Intersect!" << endl;
             }
-            // }
         }
     }
 
@@ -1168,10 +1182,10 @@ public:
         Model->popMatrix();
         texProg->unbind();
 
-        silhoutteProg->bind();
-		glUniformMatrix4fv(silhoutteProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
-		glUniformMatrix4fv(silhoutteProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-        silhoutteProg->unbind();
+        bboxProg->bind();
+		glUniformMatrix4fv(bboxProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
+		glUniformMatrix4fv(bboxProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+        bboxProg->unbind();
 
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -1197,7 +1211,6 @@ public:
         Model->pushMatrix();
             Model->translate(vec3(0, 2, 0));
             Model->scale(vec3(2, 2, 2));
-
 
 
             //cylinder  in front
@@ -1622,6 +1635,7 @@ public:
             Model->popMatrix();
 
 
+            /*
             //stair building 
             Model->pushMatrix();
                 texture14->bind(texProg->getUniform("Texture0"));
@@ -1632,7 +1646,19 @@ public:
                 setModel(texProg, Model);
                 stair_build->draw(texProg);
             Model->popMatrix();
+            */
 
+
+            Model->pushMatrix();
+                texture14->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(13, -4, 30));
+                Model->rotate(-PI/2, (vec3(0, 1, 0)));
+                Model->scale(vec3(7, 7, 7));
+                resize_and_center(stair_building.gMin, stair_building.gMax, Model);
+                setModel(texProg, Model);
+                stair_building.draw_and_collide(texProg, Model->topMatrix());
+                
+            Model->popMatrix();
 
 
         Model->popMatrix();
@@ -1644,11 +1670,11 @@ public:
         //draw all BBox
         //
         if(draw_boxes){
-            silhoutteProg->bind();
+            bboxProg->bind();
             for(const std::shared_ptr<AABB>&box : allBoxes){
-               box->draw(silhoutteProg); 
+               box->draw(bboxProg); 
             }
-            silhoutteProg->unbind();
+            bboxProg->unbind();
         }
 
         
