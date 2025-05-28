@@ -13,7 +13,8 @@
 //make it so the obstacles are cell shaded solid colors
 //Text generation using a namespace
 //look further into quaternions and how they work
-//import objects as multishape so that bounding boxes work correctly
+//look into having both single object & multi object models be reusibale 
+//right now its just multimodel because single model dont create copies
 //implement OBB
 //
 
@@ -185,11 +186,16 @@ public:
         vec3 gMin;
         vec3 gMax;
 
+        //we need this to be able to loop through the boxes and shapes drawing
+        //each model along with transforming the boxes and creating copies for
+        //each box so that the previous ones arent overwritten
         void draw_and_collide(shared_ptr<Program> prog, mat4 Model, vector<shared_ptr<AABB>> &allBoxes){
             if(shapes.size() == boxes.size()){
                 for(int i = 0; i < shapes.size(); i++){
                    shapes[i]->draw(prog); 
-
+                   
+                   //create a copy of box and push to enable multiple of the same
+                   //AABB
                    AABB transformedBox = boxes[i]->transformed(Model);
                    transformedBox.init();
                    allBoxes.push_back(make_shared<AABB>(transformedBox));     }
