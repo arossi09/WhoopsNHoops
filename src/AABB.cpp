@@ -45,6 +45,21 @@ void AABB::transform(const glm::mat4& model){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+AABB AABB::transformed(const glm::mat4& model) const {
+    std::vector<glm::vec3> corners = getOriginalCorners();
+
+    glm::vec3 newMin = glm::vec3(model * glm::vec4(corners[0], 1.0f));
+    glm::vec3 newMax = newMin;
+
+    for (int i = 0; i < 8; i++) {
+        glm::vec3 pt = glm::vec3(model * glm::vec4(corners[i], 1.0f));
+        newMin = glm::min(newMin, pt);
+        newMax = glm::max(newMax, pt);
+    }
+
+    return AABB(newMin, newMax);
+}
+
 
 std::vector<glm::vec3> AABB::getOriginalCorners() const {
     return {

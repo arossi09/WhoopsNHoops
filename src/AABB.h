@@ -24,6 +24,8 @@ class AABB{
 
         void transform(const glm::mat4& model);
 
+        AABB transformed(const glm::mat4& model) const;
+
         std::vector<glm::vec3> getCorners() const;
 
 

@@ -74,7 +74,6 @@ public:
 
 	shared_ptr<Shape> storageunit;
 
-	shared_ptr<Shape> guardrail;
 
 	shared_ptr<Shape> pallet;
 
@@ -147,6 +146,7 @@ public:
     vector <shared_ptr<AABB>> allBoxes;
 
 
+
     float phi = 0.0f;
     float theta = PI/2;
     float roll = 0;
@@ -184,17 +184,21 @@ public:
         vector<shared_ptr<AABB>> boxes;
         vec3 gMin;
         vec3 gMax;
-        void draw_and_collide(shared_ptr<Program> prog, mat4 Model){
+
+        void draw_and_collide(shared_ptr<Program> prog, mat4 Model, vector<shared_ptr<AABB>> &allBoxes){
             if(shapes.size() == boxes.size()){
                 for(int i = 0; i < shapes.size(); i++){
                    shapes[i]->draw(prog); 
-                   boxes[i]->transform(Model); 
-                }
+
+                   AABB transformedBox = boxes[i]->transformed(Model);
+                   transformedBox.init();
+                   allBoxes.push_back(make_shared<AABB>(transformedBox));     }
             }
         }
     };
 
     multiModel stair_building; 
+    multiModel guardrail; 
 
     //drone struct with attributes and update
     struct Drone {
@@ -685,7 +689,6 @@ public:
 			ground->init();
             groundBox = make_shared<AABB>(ground->min, ground->max);
             groundBox->init();
-            allBoxes.push_back(groundBox);
 
 		}
 
@@ -754,19 +757,6 @@ public:
 
 
 
-		vector<tinyobj::shape_t> TOshapesH;
- 		vector<tinyobj::material_t> objMaterialsH;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesH, objMaterialsH, errStr, (resourceDirectory + "/guardrail.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			guardrail= make_shared<Shape>();
-		    guardrail->createShape(TOshapesH[0]);
-			guardrail->measure();
-			guardrail->init();
-		}
 
 
 		vector<tinyobj::shape_t> TOshapesI;
@@ -783,7 +773,6 @@ public:
 			pallet->init();
             palletBox = make_shared<AABB>(pallet->min, pallet->max);
             palletBox->init();
-            allBoxes.push_back(palletBox);
 		}
 
 
@@ -833,8 +822,6 @@ public:
             tiledwallBox2 = make_shared<AABB>(tiledwall->min, tiledwall->max);
             tiledwallBox1->init();
             tiledwallBox2->init();
-            allBoxes.push_back(tiledwallBox1);
-            allBoxes.push_back(tiledwallBox2);
 		}
 
 
@@ -915,6 +902,7 @@ public:
 
 
         stair_building= loadMultiShape("/multi_shape_stair.obj", resourceDirectory);
+        guardrail= loadMultiShape("/multi_shape_guardrail.obj", resourceDirectory);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
@@ -944,7 +932,10 @@ public:
                 box->init();
                 result.shapes.push_back(shape);
                 result.boxes.push_back(box);
-                allBoxes.push_back(box);
+
+                //right now automatically adds to collision detection
+                //might want to not automatically and have this on
+                //draw
 
                 minBounds.x = std::min(minBounds.x, shape->min.x);
                 minBounds.y = std::min(minBounds.y, shape->min.y);
@@ -1136,6 +1127,7 @@ public:
 
 
 	void render() {
+        allBoxes.clear();
 		// Get current frame buffer size.
 		int width, height;
 
@@ -1262,6 +1254,7 @@ public:
                 texture2->bind(texProg->getUniform("Texture0"));
                 resize_and_center(ground->min, ground->max, Model);
                 groundBox->transform(Model->topMatrix());
+                allBoxes.push_back(groundBox);
                 setModel(texProg, Model);
                 ground->draw(texProg);
             Model->popMatrix();
@@ -1315,10 +1308,9 @@ public:
                 Model->translate(vec3(0, -.35f, -18));
                 Model->rotate(-PI/2.1, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
-                resize_and_center(guardrail->min, guardrail->max, Model);
+                resize_and_center(guardrail.gMin, guardrail.gMax, Model);
                 setModel(texProg, Model);
-                guardrail->draw(texProg);
-
+                guardrail.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
             Model->popMatrix();
 
             //guard rail middle right
@@ -1327,9 +1319,9 @@ public:
                 Model->translate(vec3(12, -.35f, -18));
                 Model->rotate(-PI/1.9, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
-                resize_and_center(guardrail->min, guardrail->max, Model);
+                resize_and_center(guardrail.gMin, guardrail.gMax, Model);
                 setModel(texProg, Model);
-                guardrail->draw(texProg);
+                guardrail.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
 
             Model->popMatrix();
 
@@ -1339,9 +1331,9 @@ public:
                 Model->translate(vec3(28, -.35f, -18));
                 Model->rotate(-PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
-                resize_and_center(guardrail->min, guardrail->max, Model);
+                resize_and_center(guardrail.gMin, guardrail.gMax, Model);
                 setModel(texProg, Model);
-                guardrail->draw(texProg);
+                guardrail.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
             Model->popMatrix();
 
 
@@ -1351,9 +1343,9 @@ public:
                 Model->translate(vec3(-30, -.35f, -18));
                 Model->rotate(-PI/2.1, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
-                resize_and_center(guardrail->min, guardrail->max, Model);
+                resize_and_center(guardrail.gMin, guardrail.gMax, Model);
                 setModel(texProg, Model);
-                guardrail->draw(texProg);
+                guardrail.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
             Model->popMatrix();
 
 
@@ -1363,9 +1355,9 @@ public:
                 Model->translate(vec3(-18, -.35f, -18));
                 Model->rotate(-PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
-                resize_and_center(guardrail->min, guardrail->max, Model);
+                resize_and_center(guardrail.gMin, guardrail.gMax, Model);
                 setModel(texProg, Model);
-                guardrail->draw(texProg);
+                guardrail.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
             Model->popMatrix();
 
             //pallet laying on top
@@ -1379,6 +1371,7 @@ public:
                 setModel(texProg, Model);
                 pallet->draw(texProg);
                 palletBox->transform(Model->topMatrix());
+                allBoxes.push_back(palletBox);
             Model->popMatrix();
 
             //pallet on floor
@@ -1531,6 +1524,7 @@ public:
                 resize_and_center(tiledwall->min, tiledwall->max, Model);
                 setModel(texProg, Model);
                 tiledwallBox1->transform(Model->topMatrix());
+                allBoxes.push_back(tiledwallBox1);
                 tiledwall->draw(texProg);
             Model->popMatrix();
 
@@ -1543,6 +1537,7 @@ public:
                 resize_and_center(tiledwall->min, tiledwall->max, Model);
                 setModel(texProg, Model);
                 tiledwallBox2->transform(Model->topMatrix());
+                allBoxes.push_back(tiledwallBox2);
                 tiledwall->draw(texProg);
             Model->popMatrix();
 
@@ -1656,7 +1651,7 @@ public:
                 Model->scale(vec3(7, 7, 7));
                 resize_and_center(stair_building.gMin, stair_building.gMax, Model);
                 setModel(texProg, Model);
-                stair_building.draw_and_collide(texProg, Model->topMatrix());
+                stair_building.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
                 
             Model->popMatrix();
 
