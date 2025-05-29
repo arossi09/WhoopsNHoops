@@ -7,6 +7,13 @@
 AABB::AABB(const glm::vec3 &min, const glm::vec3 &max) : min(min), max(max), 
                         originalMin(min), originalMax(max){};
 
+/*
+AABB::AABB(const AABB& other)
+    : min(other.min), max(other.max),
+      originalMin(other.originalMin), originalMax(other.originalMax),
+      corners(other.corners), indices(other.indices)
+{}
+*/
 
 glm::vec3 AABB::getCenter() const{
     return(min + max) * 0.5f;
@@ -87,6 +94,17 @@ std::vector<glm::vec3> AABB::getCorners() const{
         {min.x, max.y, max.z}
     };
 
+}
+
+std::shared_ptr<AABB> AABB::cloneTransformed(const glm::mat4& model) const {
+    // copy base box
+    auto newBox = std::make_shared<AABB>(*this); 
+    // update min/max and buffer
+    newBox->vaoID = this->vaoID;
+    newBox->posBufID = this->posBufID;
+    newBox->eleBufID = this->eleBufID;
+    newBox->transform(model); 
+    return newBox;
 }
 
 void AABB::init(){

@@ -16,6 +16,8 @@ class AABB{
 
         AABB(const glm::vec3 &min, const glm::vec3 &max);
 
+        /*AABB(const AABB& other);*/
+
         glm::vec3 getCenter() const;
 
         glm::vec3 getSize() const;
@@ -25,6 +27,8 @@ class AABB{
         void transform(const glm::mat4& model);
 
         AABB transformed(const glm::mat4& model) const;
+
+        std::shared_ptr<AABB> cloneTransformed(const glm::mat4& model) const;
 
         std::vector<glm::vec3> getCorners() const;
 

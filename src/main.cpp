@@ -17,6 +17,8 @@
 //right now its just multimodel because single model dont create copies
 //implement OBB
 //
+//
+//cache the instances
 
 #include <iostream>
 #include <glad/glad.h>
@@ -69,7 +71,6 @@ public:
 
 	shared_ptr<Shape> ground;
 
-	shared_ptr<Shape> house;
 
 	shared_ptr<Shape> cementwall;
 
@@ -183,8 +184,11 @@ public:
     struct multiModel{
         vector<shared_ptr<Shape>> shapes;
         vector<shared_ptr<AABB>> boxes;
+        int isStatic;
         vec3 gMin;
         vec3 gMax;
+
+        //implement cache
 
         //we need this to be able to loop through the boxes and shapes drawing
         //each model along with transforming the boxes and creating copies for
@@ -196,15 +200,44 @@ public:
                    
                    //create a copy of box and push to enable multiple of the same
                    //AABB
-                   AABB transformedBox = boxes[i]->transformed(Model);
-                   transformedBox.init();
+                   auto transformedBox = *boxes[i]->cloneTransformed(Model);
+                    
+                   //AABB transformedBox = boxes[i]->transformed(Model);
+                   //transformedBox.init();
+                   //causing lots of lag
+                   //transformedBox.init();
                    allBoxes.push_back(make_shared<AABB>(transformedBox));     }
             }
         }
     };
 
+
+    //copy the instances
+    struct singleModel{
+        shared_ptr<Shape> shape;
+        shared_ptr<AABB> box;
+        int isstatic;
+        vec3 gMin;
+        vec3 gMax;
+
+        //we need this to be able to loop through the boxes and shapes drawing
+        //each model along with transforming the boxes and creating copies for
+        //each box so that the previous ones arent overwritten
+        void draw_and_collide(shared_ptr<Program> prog, mat4 Model, vector<shared_ptr<AABB>> &allBoxes){
+                shape->draw(prog);
+                //create a copy of box and push to enable multiple of the same
+                //AABB
+                box->transform(Model);
+                //AABB transformedBox = boxes[i]->transformed(Model);
+                //transformedBox.init();
+                //causing lots of lag
+                //transformedBox.init();
+                allBoxes.push_back(box);     }
+    };
+
     multiModel stair_building; 
     multiModel guardrail; 
+    multiModel house;
 
     //drone struct with attributes and update
     struct Drone {
@@ -226,7 +259,7 @@ public:
        void updatePosition(float dt){
             previousPosition = position;
             vec3 up = orientation * vec3(0, 1, 0);
-            vec3 thrust = up * (throttle * 28000.0f); //Max thrust in N
+            vec3 thrust = up * (throttle * 30000.0f); //Max thrust in N
           
             //prob have to fix this by balancing mass and thrust instead
             vec3 gravity = vec3(0, -45.0f, 0);
@@ -361,21 +394,6 @@ public:
 
     //gather the controller inputs on callback
     void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY){
-        /*
-        cout << "leftX" << leftX << endl;
-        cout << "leftY" << leftY << endl;
-        cout << "rightX" << rightX << endl;
-        cout << "rightY" << rightY << endl;
-
-        //leftX yaw
-        theta -= leftX * sensitivity*6;
-        //pitch
-        phi += rightY * sensitivity*6;
-        //right X rotate camera
-        cRot += rightX;
-        //leftY throttle
-        //
-        //*/
         
         //turn controller axie location into drone movement data
         yawDelta   = -leftX * .07;
@@ -635,8 +653,6 @@ public:
 	void initGeom(const std::string& resourceDirectory)
 	{
 
-
-
  		vector<tinyobj::shape_t> TOshapesZ;
  		vector<tinyobj::material_t> objMaterialsZ;
  		string errStr;
@@ -700,19 +716,6 @@ public:
 
 
 
-		vector<tinyobj::shape_t> TOshapesD;
- 		vector<tinyobj::material_t> objMaterialsD;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesD, objMaterialsD, errStr, (resourceDirectory + "/house.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			house= make_shared<Shape>();
-			house->createShape(TOshapesD[0]);
-			house->measure();
-			house->init();
-		}
 
 
 		vector<tinyobj::shape_t> TOshapesE;
@@ -907,6 +910,7 @@ public:
 		}
 
 
+        house = loadMultiShape("/multi_shape_house.obj", resourceDirectory);
         stair_building= loadMultiShape("/multi_shape_stair.obj", resourceDirectory);
         guardrail= loadMultiShape("/multi_shape_guardrail.obj", resourceDirectory);
 
@@ -955,6 +959,30 @@ public:
 
         result.gMin = minBounds;
         result.gMax = maxBounds;
+        return result;
+    }
+
+    singleModel loadSingleShape(const string &filepath, const string &resourceDirectory){
+        singleModel result;
+
+ 		string errStr;
+		vector<tinyobj::shape_t> TOshapes;
+ 		vector<tinyobj::material_t> objMaterials;
+		//load in the mesh and make the shape(s)
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + filepath).c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			auto shape = make_shared<Shape>();
+			shape->createShape(TOshapes[0]);
+			shape->measure();
+			shape->init();
+            auto box = make_shared<AABB>(shape->min, shape->max);
+            box->init();
+            result.box = box;
+            result.shape = shape;
+
+		}
         return result;
     }
 
@@ -1274,9 +1302,9 @@ public:
                 Model->translate(vec3(13, 10, -2));
                 Model->rotate(-PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(8, 8, 8));
-                resize_and_center(house->min, house->max, Model);
+                resize_and_center(house.gMin, house.gMax, Model);
                 setModel(texProg, Model);
-                house->draw(texProg);
+                house.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
             Model->popMatrix();
 
 
@@ -1752,6 +1780,8 @@ int main(int argc, char *argv[])
 		// Poll for and process events.
 		glfwPollEvents();
 	}
+
+    application->allBoxes.clear();
 
 	// Quit program.
 	windowManager->shutdown();
