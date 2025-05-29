@@ -91,7 +91,6 @@ public:
 
 	shared_ptr<Shape> crate;
 
-	shared_ptr<Shape> scaffolding;
 
 	shared_ptr<Shape> wire;
 
@@ -238,25 +237,33 @@ public:
     multiModel stair_building; 
     multiModel guardrail; 
     multiModel house;
+    multiModel scaffolding;
 
     //drone struct with attributes and update
     struct Drone {
-       vec3 position = vec3(0.0f, 1.0f, 0.0f); 
-       vec3 previousPosition = vec3(0.0f);
-       quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
-       vec3 velocity = vec3(0.0f);
-       vec3 acceleration = vec3(0.0f);
-       float mass = 250.0f;
-       float throttle = 0.0;
-       float camera_title_angle = 25;
+        float superRate = 0.75f;
+        float rcRate    = 1.1f;
+        vec3 position = vec3(0.0f, 1.0f, 0.0f); 
+        vec3 previousPosition = vec3(0.0f);
+        quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
+        vec3 velocity = vec3(0.0f);
+        vec3 acceleration = vec3(0.0f);
+        float mass = 250.0f;
+        float camera_title_angle = 25;
 
-       AABB getAABB() const {
-           float halfSize = .3f;  
-           return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
-       }
+        //prob move this to another struct
+        float rollInput = 0.0f;
+        float pitchInput = 0.0f;
+        float yawInput = 0.0f;
+        float throttle = 0.0;
 
-       //calculate drone physics
-       void updatePosition(float dt){
+        AABB getAABB() const {
+            float halfSize = .3f;  
+            return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
+        }
+
+        //calculate drone physics
+        void updatePosition(float dt){
             previousPosition = position;
             vec3 up = orientation * vec3(0, 1, 0);
             vec3 thrust = up * (throttle * 30000.0f); //Max thrust in N
@@ -275,8 +282,12 @@ public:
 
        //we need this to be able to update the drones orientation based
        //off the inputs from the controller
-       void updateOrientation(float rollDelta, float pitchDelta, float yawDelta){
+       void updateOrientation(float rollVel, float pitchVel, float yawVel, float deltaTime){
            // Create quaternions around local axes (apply roll -> pitch ->  yaw)
+           float rollDelta  = rollVel  * deltaTime;
+           float pitchDelta = pitchVel * deltaTime;
+           float yawDelta   = yawVel   * deltaTime;
+
            glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
            glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
            glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
@@ -370,7 +381,6 @@ public:
 			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		}
 
-        drone.updateOrientation(rollDelta, pitchDelta, yawDelta);
 	} 
 
 	void mouseCallback(GLFWwindow *window, int button, int action, int mods)
@@ -391,17 +401,23 @@ public:
        if(phi < -80) phi = -80;
     }
 
-
+    float get_rate(float stick_input, float rcRate, float superRate, float baseDegPerSec = 200.0f) {
+        float abs_input = fabs(stick_input);
+        float base = stick_input * rcRate;
+        float super = 1.0f / (1.0f - abs_input * superRate);
+        float rate_deg = base * super * baseDegPerSec;
+        float maxRate = rcRate * (1 / (1 - superRate)) * baseDegPerSec; 
+        //printf("%f\n", maxRate);
+        return glm::radians(rate_deg); 
+    }
     //gather the controller inputs on callback
     void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY){
         
         //turn controller axie location into drone movement data
-        yawDelta   = -leftX * .07;
-        pitchDelta =  rightY * .07;
-        rollDelta  =  rightX * .07;
-        //clamp throttle [0, 1]
+        drone.yawInput   = -leftX;
+        drone.pitchInput =  rightY;
+        drone.rollInput  =  rightX; //clamp throttle [0, 1]
         drone.throttle = (leftY+1)/2;
-        drone.updateOrientation(rollDelta, pitchDelta, yawDelta);
     }
 
 
@@ -864,19 +880,6 @@ public:
 			telephone_pole->init();
 		}
 
-		vector<tinyobj::shape_t> TOshapesO;
- 		vector<tinyobj::material_t> objMaterialsO;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesO, objMaterialsO, errStr, (resourceDirectory + "/scaffolding.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			scaffolding= make_shared<Shape>();
-		    scaffolding->createShape(TOshapesO[0]);
-			scaffolding->measure();
-			scaffolding->init();
-		}
 
 
 
@@ -913,6 +916,7 @@ public:
         house = loadMultiShape("/multi_shape_house.obj", resourceDirectory);
         stair_building= loadMultiShape("/multi_shape_stair.obj", resourceDirectory);
         guardrail= loadMultiShape("/multi_shape_guardrail.obj", resourceDirectory);
+        scaffolding = loadMultiShape("/scaffolding_multi_shape.obj", resourceDirectory);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
@@ -1651,9 +1655,9 @@ public:
                 Model->rotate(PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(5, 5, 5));
                 texture12->bind(texProg->getUniform("Texture0"));
-                resize_and_center(scaffolding->min, scaffolding->max, Model);
+                resize_and_center(scaffolding.gMin, scaffolding.gMax, Model);
                 setModel(texProg, Model);
-                scaffolding->draw(texProg);
+                scaffolding.draw_and_collide(texProg, Model->topMatrix(), allBoxes);
             Model->popMatrix();
 
 
@@ -1770,6 +1774,12 @@ int main(int argc, char *argv[])
         dt = std::fmin(dt, 0.03);
 
         application->drone.updatePosition(dt);
+
+        float yawVel   = application->get_rate(application->drone.yawInput,   application->drone.rcRate, application->drone.superRate);
+        float pitchVel = application->get_rate(application->drone.pitchInput, application->drone.rcRate, application->drone.superRate);
+        float rollVel  = application->get_rate(application->drone.rollInput,  application->drone.rcRate, application->drone.superRate);
+        application->drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
+
 		// Render scene.
         application->handleCollision();
 		application->render();
