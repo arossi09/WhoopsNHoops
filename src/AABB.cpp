@@ -2,6 +2,7 @@
 
 #include "GLSL.h"
 #include "Program.h"
+#include "Drone.h"
 
 
 AABB::AABB(const glm::vec3 &min, const glm::vec3 &max) : min(min), max(max), 
@@ -51,6 +52,7 @@ void AABB::transform(const glm::mat4& model){
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * 8, corners.data());
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
+
 
 AABB AABB::transformed(const glm::mat4& model) const {
     std::vector<glm::vec3> corners = getOriginalCorners();
@@ -106,6 +108,7 @@ std::shared_ptr<AABB> AABB::cloneTransformed(const glm::mat4& model) const {
     newBox->transform(model); 
     return newBox;
 }
+
 
 void AABB::init(){
     corners = {
