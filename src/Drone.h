@@ -8,8 +8,8 @@ using namespace glm;
 
 //drone struct with attributes and update
 struct Drone {
-    float superRate = 0.75f;
-    float rcRate    = 1.1f;
+    float superRate = 0.61f;
+    float rcRate    = 1.0f;
     vec3 position = vec3(0.0f, 1.0f, 0.0f); 
     vec3 previousPosition = vec3(0.0f);
     quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -25,7 +25,7 @@ struct Drone {
     float throttle = 0.0;
 
     AABB getAABB() const {
-        float halfSize = .3f;  
+        float halfSize = .5f;  
         return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
     }
 
@@ -36,7 +36,7 @@ struct Drone {
         vec3 thrust = up * (throttle * 60000.0f); //Max thrust in N
 
         //prob have to fix this by balancing mass and thrust instead
-        vec3 gravity = vec3(0, -90.0f, 0);
+        vec3 gravity = vec3(0, -95.0f, 0);
         vec3 netForce = thrust + (gravity * mass);
         acceleration = netForce/mass;
 
@@ -61,6 +61,15 @@ struct Drone {
         orientation = orientation * qYaw * qPitch * qRoll;
         orientation = glm::normalize(orientation);
     }
+
+
+    void updateMouseOrientation(float phi, float theta, float dt){
+        glm::quat qPitch = glm::angleAxis(glm::radians(phi), glm::vec3(1, 0, 0));   // pitch around X
+        glm::quat qYaw   = glm::angleAxis(glm::radians(theta), glm::vec3(0, 1, 0)); // yaw around Y
+
+        orientation = qYaw * qPitch;
+
+        orientation = glm::normalize(orientation);}
 };
 
 #endif

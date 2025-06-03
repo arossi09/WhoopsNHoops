@@ -28,6 +28,7 @@
 #include "Drone.h"
 #include "Physics.h"
 #include "AABB.h"
+#include "Spline.h"
 
 #define PI 3.14
 
@@ -133,6 +134,9 @@ public:
     //example data that might be useful when trying to compute bounds on multi-shape
     vec3 gMin;
     vec3 gMax;
+    vec3 gPos;
+    vec3 gCenter = vec3(0, 0, 0);
+    float radius = 100;
 
 
 
@@ -149,7 +153,6 @@ public:
     float gRot = 0;
     float gCamH = 0;
     float sensitivity = .1 ;
-    float radius = 1.0f;
     //animation data
     float lightTrans = 0;
     float gTrans = -3;
@@ -157,8 +160,14 @@ public:
     float cTheta = 0;
     float eTheta = 0;
     float hTheta = 0;
+
     int draw_boxes = 0;
+    bool goCamera = false;
     
+
+    Spline splinepath[3];
+    int currentSpline = 0;
+    int numSplines = 3;
 
 
     struct Material{
@@ -287,25 +296,23 @@ public:
 		}
 
 		if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-			drone.throttle= 1;
-		}
+		   
+            vec3 front = drone.orientation * vec3(0, 0, -1);
 
-		if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
-			drone.throttle= .45;
+            drone.position += front * vec3(2);
 		}
 
 		//update camera height
 		if (key == GLFW_KEY_S && action == GLFW_PRESS){
-		    drone.throttle = 0;	
+            vec3 front = drone.orientation * vec3(0, 0, -1);
+
+            drone.position -= front * vec3(2);
 		}
-		if (key == GLFW_KEY_F && action == GLFW_PRESS){
-			gCamH  -= 1.25;
+		if (key == GLFW_KEY_G && action == GLFW_PRESS){
+            goCamera = !goCamera;
 		}
 
 
-		if (key == GLFW_KEY_B && action == GLFW_PRESS){
-            draw_boxes = !draw_boxes;
-		}
 
 		if (key == GLFW_KEY_Q && action == GLFW_PRESS){
 			lightTrans += 1.25;
@@ -338,6 +345,7 @@ public:
        theta += deltaX * sensitivity;
        if(phi > 80) phi = 80;
        if(phi < -80) phi = -80;
+       drone.updateMouseOrientation(phi, theta, .005);
     }
 
     //stold this from betaflight :p
@@ -361,13 +369,10 @@ public:
     }
 
 
-    void updateCamera(shared_ptr<MatrixStack> &view){
-        vec3 direction;
-        vec3 eye = vec3(0, 10, -30);
-        eye.y += gCamH;
-        direction.x = radius*cos(glm::radians(phi)) * cos(glm::radians(theta));
-        direction.y = radius*sin(glm::radians(phi));
-        direction.z = radius*cos(glm::radians(phi)) * cos((PI/2) -radians(theta));
+    void updateCamera(shared_ptr<MatrixStack> &view, Drone &drone){
+        vec3 direction = drone.orientation * vec3(0, 0, -1);
+        vec3 eye = drone.position;
+        vec3 up = drone.orientation * vec3(0, 1, 0);
         direction = glm::normalize(direction);
 
         //eye + direction for look at because we need look at relative 
@@ -387,6 +392,28 @@ public:
         return delta.count();
     }
 
+
+    void updateUsingCameraPath(float frametime)  {
+
+   	  if (goCamera) {
+       if(!splinepath[currentSpline].isDone()){
+       		splinepath[currentSpline].update(frametime);
+            gPos = splinepath[currentSpline].getPosition();
+
+            if(currentSpline == 0){
+                gCenter = vec3(0, 0, 0);
+            }else if(currentSpline == 1){
+                gCenter = vec3(-65, 20, 10);
+            }else{
+                gCenter = vec3(110, 20, 10);
+            }
+        } else {
+            currentSpline =(currentSpline + 1) % numSplines;
+            splinepath[currentSpline].reset();
+        }
+      }
+   	}
+
     //update camera location and orrientation based off drone
     void updateCamera(shared_ptr<MatrixStack> &view, 
             vec3 drone_position, quat drone_orientation, float drone_camera_angle){
@@ -400,7 +427,12 @@ public:
         vec3 forward = cameraOrientation* vec3(0.0f, 0.0f, -1.0f);
         vec3 up      = cameraOrientation* vec3(0.0f, 1.0f,  0.0f);
         //to where camera is 
-        view->lookAt(eye, eye+forward, up);
+       
+        if(goCamera){
+            view->lookAt(gPos, gCenter, vec3(0, 1, 0));
+        }else{
+            view->lookAt(eye, eye+forward, up);
+        }
     }
 
 	void resizeCallback(GLFWwindow *window, int width, int height)
@@ -418,6 +450,9 @@ public:
 		// Enable z-buffer test.
 		glEnable(GL_DEPTH_TEST);
 
+        splinepath[0] = Spline(glm::vec3(-radius, 10, -radius), glm::vec3(-radius,15,-radius), glm::vec3(radius, 15, -radius), glm::vec3(radius,10,-radius), 5);
+        splinepath[1] = Spline(glm::vec3(-45, 20, 10), glm::vec3(0), glm::vec3(0), glm::vec3(-45, 20, -10), 10);
+        splinepath[2] = Spline(glm::vec3(150, 10, 10), glm::vec3(150, 10, 10), glm::vec3(150, 10, -20), glm::vec3(150, 10, -20), 10);
         //this is for phongg shading flat
 		prog = make_shared<Program>();
 		prog->setVerbose(true);
@@ -879,7 +914,7 @@ public:
 	//directly pass quad for the ground to the GPU
 	void initGround() {
 
-		float g_groundSize = 200;
+		float g_groundSize = 400;
 		float g_groundY = -8;
 
   		// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
@@ -1020,7 +1055,7 @@ public:
     }
 
 
-	void render() {
+	void render(float dt) {
 		// Get current frame buffer size.
 		int width, height;
 
@@ -1039,13 +1074,27 @@ public:
 		auto View = make_shared<MatrixStack>();
 		auto Model = make_shared<MatrixStack>();
 
+        float yawVel   = get_rate(drone.yawInput,   drone.rcRate, drone.superRate);
+        float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
+        float rollVel  = get_rate(drone.rollInput,  drone.rcRate, drone.superRate);
+
+        if(goCamera){
+            updateUsingCameraPath(dt);
+
+        }else{
+            drone.updatePosition(dt);
+            drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
+        }
+
+
 		// Apply perspective projection.
 		Projection->pushMatrix();
-		Projection->perspective(45.5f, aspect, 0.01f, 400.0f);
+		Projection->perspective(45.5f, aspect, 0.01f, 800.0f);
 
 		// View is global translation along negative z for now
 		View->pushMatrix();
 		View->loadIdentity();
+            
         updateCamera(View, drone.position, drone.orientation, drone.camera_title_angle);
         
 
@@ -1061,7 +1110,7 @@ public:
         
         Model->pushMatrix();
             texture1->bind(texProg->getUniform("Texture0"));
-            Model->scale(vec3(200, 200, 200));
+            Model->scale(vec3(400, 400, 400));
             setModel(texProg, Model);
             sphere->draw(texProg);
         Model->popMatrix();
@@ -1610,15 +1659,9 @@ int main(int argc, char *argv[])
         float dt = application->calculateDeltaTime();
         dt = std::fmin(dt, 0.03);
 
-        application->drone.updatePosition(dt);
-
-        float yawVel   = application->get_rate(application->drone.yawInput,   application->drone.rcRate, application->drone.superRate);
-        float pitchVel = application->get_rate(application->drone.pitchInput, application->drone.rcRate, application->drone.superRate);
-        float rollVel  = application->get_rate(application->drone.rollInput,  application->drone.rcRate, application->drone.superRate);
-        application->drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
 
 		// Render scene.
-		application->render();
+		application->render(dt);
     
         windowManager->pollGamepadInput();
 		// Swap front and back buffers.
