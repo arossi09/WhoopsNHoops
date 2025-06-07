@@ -2,6 +2,7 @@
 
 #include "GLSL.h"
 #include "Program.h"
+#include "OBB.h"
 #include "Drone.h"
 
 
@@ -109,7 +110,12 @@ std::shared_ptr<AABB> AABB::cloneTransformed(const glm::mat4& model) const {
     return newBox;
 }
 
-
+OBB AABB::toOBB() const {
+    glm::vec3 center = (originalMin + originalMax) * 0.5f;
+    glm::vec3 halfWidths = (originalMax - originalMin) * 0.5f;
+    glm::mat3 orientation = glm::mat3(1.0f); // axis-aligned
+    return OBB(center, halfWidths, orientation);
+}
 void AABB::init(){
     corners = {
         {min.x, min.y, min.z},

@@ -12,6 +12,7 @@ void main() {
 	vec3 light = normalize(-lightDirection);
     float dC = max(dot(normal, light), .1);
 
+
   	//to set the out color as the texture color 
     if(lightToggle == 1){
         if(dC > .5){

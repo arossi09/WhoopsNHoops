@@ -38,7 +38,7 @@ public:
 	virtual void resizeCallback(GLFWwindow *window, int in_width, int in_height) = 0;
 
 	virtual void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) = 0;
-    virtual void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY) = 0;
+    virtual void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY, bool gamepad_connected) = 0;
 
 
 };

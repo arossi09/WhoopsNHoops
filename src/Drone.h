@@ -10,13 +10,17 @@ using namespace glm;
 struct Drone {
     float superRate = 0.61f;
     float rcRate    = 1.0f;
+    float maxVelocity = 70.0f;
     vec3 position = vec3(0.0f, 1.0f, 0.0f); 
     vec3 previousPosition = vec3(0.0f);
     quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
+    quat prevorientation = quat(1.0, 0.0f, 0.0f, 0.0f);
     vec3 velocity = vec3(0.0f);
     vec3 acceleration = vec3(0.0f);
     float mass = 250.0f;
     float camera_title_angle = 25;
+
+    std::string trick = "";
 
     //prob move this to another struct
     float rollInput = 0.0f;
@@ -24,8 +28,23 @@ struct Drone {
     float yawInput = 0.0f;
     float throttle = 0.0;
 
+    //trick detector
+    float rollAcum = 0.0f;
+    float pitchAcum = 0.0f;
+    float yawAcum = 0.0f;
+    float dPitch = 0.0f;
+    float dYaw= 0.0f;
+    float dRoll= 0.0f;
+    bool intrick = false;
+    bool diving = false;
+    float timeSinceLastTrick = 0.0f;
+    float rollTimer = 0.0f;
+    float pitchTimer = 0.0f;
+    float yawTimer = 0.0f;
+    float maxTricktime = 1.5f;
+
     AABB getAABB() const {
-        float halfSize = .5f;  
+        float halfSize = .7f;  
         return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
     }
 
@@ -45,6 +64,80 @@ struct Drone {
         velocity += acceleration * dt;
         velocity *= .99f;
         position += velocity * dt;
+
+        if (length(velocity) > maxVelocity) {
+            velocity = normalize(velocity) * maxVelocity;
+        }
+    }
+
+    void updateTrickState(float dt){
+       // we need to calculate the delta angles for pitch, yaw, and 
+       // roll to see if we complete full rotations
+       glm::quat deltaQ = glm::inverse(prevorientation) * orientation;
+       glm::vec3 eulerDelta = glm::eulerAngles(deltaQ);
+
+       //these hold the delta values in case we are able to add it to total
+       //accum 
+       dRoll= glm::degrees(eulerDelta.z);
+       dPitch= glm::degrees(eulerDelta.x);
+       dYaw= glm::degrees(eulerDelta.y);
+       timeSinceLastTrick += dt; 
+
+
+       //these ensure threshold for the trick to be done within
+       //the maxTricktime limit
+       //
+       //time starts once the delta is over 0.5
+       if(abs(dRoll)> 0.5f){
+         rollTimer += dt;
+         rollAcum += dRoll;
+       }
+
+
+       if(abs(dPitch)> 0.5f){
+         pitchTimer+= dt;
+         pitchAcum += dPitch;
+       }
+
+
+       if(abs(dYaw)> 0.5f){
+         yawTimer+= dt;
+         yawAcum += dYaw;
+       }
+
+       //this checks if the delta in each axis is a full rotation 
+       //and the timer for each axis has not exceeded the maxTricktime
+       if(abs(rollAcum) >= 335.0f && rollTimer <= maxTricktime){
+           trick = "barrel roll!";
+           rollAcum = 0.0f;
+           rollTimer = 0.0f;
+           timeSinceLastTrick = 0.0f;
+       }//if we exceed the maxTrick time reset the time and total delta
+       else if (rollTimer > maxTricktime) { 
+        rollAcum = 0.0f;
+        rollTimer = 0.0f;
+        }
+
+       if(abs(pitchAcum) >= 335.0f && pitchTimer <= maxTricktime){
+           trick = "Front/Back flip!";
+           pitchAcum= 0.0f;
+           pitchTimer = 0.0f;
+           timeSinceLastTrick = 0.0f;
+       }else if(pitchTimer > maxTricktime){
+           pitchTimer = 0.0f;
+           pitchAcum = 0.0f;
+       }
+
+       if(abs(yawAcum) >= 360.0f && yawTimer <= maxTricktime){
+           trick = "Yaw Spin!";
+           yawAcum = 0.0f;
+           yawTimer = 0.0f;
+           timeSinceLastTrick = 0.0f;
+       }else if(yawTimer > maxTricktime){
+           yawTimer = 0.0f;
+           yawAcum = 0.0f;
+       }
+       prevorientation = orientation;
     }
 
     //we need this to be able to update the drones orientation based
@@ -61,6 +154,8 @@ struct Drone {
         orientation = orientation * qYaw * qPitch * qRoll;
         orientation = glm::normalize(orientation);
     }
+
+
 
 
     void updateMouseOrientation(float phi, float theta, float dt){

@@ -129,7 +129,6 @@ void WindowManager::scroll_callback(GLFWwindow * window, double in_deltaX, doubl
 void WindowManager::pollGamepadInput(){
     int joystickID = GLFW_JOYSTICK_1;
     if(glfwJoystickPresent(GLFW_JOYSTICK_1)){
-
         //gamepad(xbox controller)
         if(glfwJoystickIsGamepad(joystickID)){
             GLFWgamepadstate state;  
@@ -140,7 +139,7 @@ void WindowManager::pollGamepadInput(){
                 float rightX= -state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
                 float rightY= state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
                 if (instance && instance->callbacks) {
-                    instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY);
+                    instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY, true);
                 }
 
             }
@@ -162,10 +161,13 @@ void WindowManager::pollGamepadInput(){
 
 
             if(instance && instance->callbacks){
-                instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY);
+                instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY, true);
             }
         }
+    }else{
+        instance->callbacks->gamepadInputCallback(0, 0, 0, 0, false);
     }
+
 
 }
 

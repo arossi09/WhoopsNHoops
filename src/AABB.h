@@ -3,6 +3,7 @@
 #include <vector>
 
 class Program;
+class OBB;
 
 class AABB{
 
@@ -36,6 +37,9 @@ class AABB{
         std::vector<glm::vec3> getOriginalCorners() const;
 
         void draw(const std::shared_ptr<Program> prog);
+
+        OBB toOBB() const;
+
 
         void init();
 

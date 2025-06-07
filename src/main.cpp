@@ -6,6 +6,11 @@
 
 
 
+//TODO
+//finish scene
+//fix OBB
+//add collectable propellers
+//fix text class
 
 //I could make a shape array to load each shape and then have enums
 //for the index with the name being the index for that object
@@ -29,6 +34,8 @@
 #include "Physics.h"
 #include "AABB.h"
 #include "Spline.h"
+#include "OBB.h"
+#include "Text.h"
 
 #define PI 3.14
 
@@ -56,6 +63,8 @@ public:
 
 	std::shared_ptr<Program> cellProg;
 
+	std::shared_ptr<Program> textProg;
+
 	std::shared_ptr<Program> bboxProg;
 
 	//Our shader program for textures
@@ -64,14 +73,12 @@ public:
 	//our geometry
 	shared_ptr<Shape> sphere;
 
-	shared_ptr<Shape> cylinder1;
-
-	shared_ptr<Shape> cylinder2;
 
 
 
 	shared_ptr<Shape> cementwall;
 
+	shared_ptr<Shape> farground;
 
 
 
@@ -83,12 +90,12 @@ public:
 
 	shared_ptr<Shape> bunny;
 
-	shared_ptr<Shape> crate;
 
 
 	shared_ptr<Shape> wire;
 
-	shared_ptr<Shape> stair_build;
+    shared_ptr<Shape> skyscraper;
+
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
 	GLuint GrndBuffObj, GrndNorBuffObj, GrndTexBuffObj, GIndxBuffObj;
 	int g_GiboLen;
@@ -127,9 +134,17 @@ public:
 
     shared_ptr<Texture> texture14;
 
+    shared_ptr<Texture> texture15;
+
+    shared_ptr<Texture> texture16;
+
+    shared_ptr<Texture> texture17;
+
 
 
     vector <shared_ptr<Shape>> shapes;
+
+    map<char, Character> characters;
 
     //example data that might be useful when trying to compute bounds on multi-shape
     vec3 gMin;
@@ -144,6 +159,7 @@ public:
     float theta = PI/2;
     float roll = 0;
 
+    bool gamepad_connected;
     //gamepad 
     float yawDelta = 0;
     float pitchDelta = 0;
@@ -161,8 +177,9 @@ public:
     float eTheta = 0;
     float hTheta = 0;
 
-    int draw_boxes = 0;
-    bool goCamera = false;
+
+    vector<shared_ptr<AABB>> draw_boxes;
+    bool goCamera = true;
     
 
     Spline splinepath[3];
@@ -179,7 +196,8 @@ public:
 
     struct multiModel{
         vector<shared_ptr<Shape>> shapes;
-        vector<shared_ptr<AABB>> boxes;
+        vector<shared_ptr<AABB>> AABB_boxes;
+        vector<shared_ptr<OBB>> OBB_boxes;
         int isStatic;
         vec3 gMin;
         vec3 gMax;
@@ -190,18 +208,23 @@ public:
         //each model along with transforming the boxes and creating copies for
         //each box so that the previous ones arent overwritten
         void draw_and_collide(shared_ptr<Program> prog, mat4 Model, Drone &drone){
-            if(shapes.size() == boxes.size()){
+            if(shapes.size() == AABB_boxes.size() || shapes.size() == OBB_boxes.size()){
                 for(int i = 0; i < shapes.size(); i++){
                    shapes[i]->draw(prog); 
-                   
+                  
+                   if(OBB_boxes.size() > 0){
+                       OBB transformedBox = OBB_boxes[i]->transformed(mat4(1));
+                       Physics::handleCollision(transformedBox, drone, Model);
+                   }else{
+                       AABB transformedBox = AABB_boxes[i]->transformed(Model);
+                       Physics::handleCollision(transformedBox, drone);
+                   }
                    //create a copy of box and push to enable multiple of the same
                    //AABB
-                   AABB transformedBox = boxes[i]->transformed(Model);
                    //AABB transformedBox = boxes[i]->transformed(Model);
                    //transformedBox.init();
                    //causing lots of lag
                    //transformedBox.init();
-                   Physics::handleCollision(transformedBox, drone);
                 }
             }
         }
@@ -211,7 +234,8 @@ public:
     //copy the instances
     struct singleModel{
         shared_ptr<Shape> shape;
-        shared_ptr<AABB> box;
+        shared_ptr<AABB> AABB_box;
+        shared_ptr<OBB> OBB_box;
         int isstatic;
         vec3 gMin;
         vec3 gMax;
@@ -224,12 +248,13 @@ public:
             //create a copy of box and push to enable multiple of the same
             //AABB
 
-            AABB transformedBox = box->transformed(Model);
-            //AABB transformedBox = boxes[i]->transformed(Model);
-            //transformedBox.init();
-            //causing lots of lag
-            //transformedBox.init();
-            Physics::handleCollision(transformedBox, drone);
+            if(AABB_box){
+                AABB transformedBox = AABB_box->transformed(Model);
+                Physics::handleCollision(transformedBox, drone);
+            }else{
+                OBB transformedbox = OBB_box->transformed(mat4(1));
+                Physics::handleCollision(transformedbox, drone, Model);
+            }
         }
     };
 
@@ -238,6 +263,9 @@ public:
     multiModel house;
     multiModel scaffolding;
     multiModel storageunit;
+    multiModel cylinder1;
+    multiModel crate;
+    multiModel crane;
     singleModel ground;
     singleModel pallet;
     singleModel tiledwall;
@@ -276,28 +304,26 @@ public:
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
+
+        vec3 up = drone.orientation * vec3(0, 1, 0);
+        vec3 front = drone.orientation * vec3(0, 0, -1);
+        vec3 right = cross(up, front);
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		{
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 		//update global camera rotate
 		if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-			yawDelta = 0.5;
+
+            drone.position += right * vec3(2);
 		}
 
-		if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
-			yawDelta = 0;
-		}
 		if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-			yawDelta = -.5f;
-		}
-		if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
-			yawDelta = 0;
+            drone.position -= right * vec3(2);
 		}
 
 		if (key == GLFW_KEY_W && action == GLFW_PRESS) {
 		   
-            vec3 front = drone.orientation * vec3(0, 0, -1);
 
             drone.position += front * vec3(2);
 		}
@@ -345,7 +371,7 @@ public:
        theta += deltaX * sensitivity;
        if(phi > 80) phi = 80;
        if(phi < -80) phi = -80;
-       drone.updateMouseOrientation(phi, theta, .005);
+       //drone.updateMouseOrientation(phi, theta, .005);
     }
 
     //stold this from betaflight :p
@@ -359,13 +385,15 @@ public:
         return glm::radians(rate_deg); 
     }
     //gather the controller inputs on callback
-    void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY){
-        
-        //turn controller axie location into drone movement data
-        drone.yawInput   = -leftX;
-        drone.pitchInput =  rightY;
-        drone.rollInput  =  rightX; //clamp throttle [0, 1]
-        drone.throttle = (leftY+1)/2;
+    void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY, bool gamepad){
+        gamepad_connected = gamepad;
+        if(gamepad){
+            //turn controller axie location into drone movement data
+            drone.yawInput   = -leftX;
+            drone.pitchInput =  rightY;
+            drone.rollInput  =  rightX; //clamp throttle [0, 1]
+            drone.throttle = (leftY+1)/2;
+        }
     }
 
 
@@ -377,7 +405,7 @@ public:
 
         //eye + direction for look at because we need look at relative 
         //to where camera is 
-        view->lookAt(eye, eye+direction, vec3(0, 1, 0));
+        //view->lookAt(eye, eye+direction, vec3(0, 1, 0));
     }
 
 
@@ -484,6 +512,16 @@ public:
 		cellProg->addAttribute("vertPos");
 		cellProg->addAttribute("vertNor");
 
+        textProg = make_shared<Program>();
+        textProg->setVerbose(true);
+        textProg->setShaderNames(resourceDirectory + "/text_vert.glsl", resourceDirectory + "/text_frag.glsl");
+        textProg->init();
+        textProg->addUniform("P");
+        textProg->addUniform("text");
+        textProg->addUniform("textColor");
+        textProg->addAttribute("vertex");
+
+
 
 
 
@@ -509,6 +547,7 @@ public:
         bboxProg->init();
         bboxProg->addUniform("P");
         bboxProg->addUniform("V");
+        bboxProg->addUniform("M");
         bboxProg->addAttribute("vertPos");
 
 
@@ -638,12 +677,33 @@ public:
   		texture14->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture14->setFiltering(GL_NEAREST, GL_NEAREST);
 
+		texture15 = make_shared<Texture>();
+  		texture15->setFilename(resourceDirectory + "/tileblock.png");
+  		texture15->init();
+  		texture15->setUnit(0);
+  		texture15->setWrapModes(GL_REPEAT, GL_REPEAT);
+        texture15->setFiltering(GL_NEAREST, GL_NEAREST);
+
+		texture16 = make_shared<Texture>();
+  		texture16->setFilename(resourceDirectory + "/skyscraper.png");
+  		texture16->init();
+  		texture16->setUnit(0);
+  		texture16->setWrapModes(GL_CLAMP_TO_EDGE,GL_CLAMP_TO_EDGE);
+        texture16->setFiltering(GL_NEAREST, GL_NEAREST);
+
+		texture17 = make_shared<Texture>();
+  		texture17->setFilename(resourceDirectory + "/scaffoldingblue.png");
+  		texture17->init();
+  		texture17->setUnit(0);
+  		texture17->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+        texture17->setFiltering(GL_NEAREST, GL_NEAREST);
 
 	}
 
 	void initGeom(const std::string& resourceDirectory)
 	{
 
+        Text::load_characters(characters);
 
         worldBox.init();
  		vector<tinyobj::shape_t> TOshapesZ;
@@ -673,41 +733,24 @@ public:
 			sphere->init();
 		}
 
-		// Initialize bunny mesh.
-		vector<tinyobj::shape_t> TOshapesB;
- 		vector<tinyobj::material_t> objMaterialsB;
+
+
+
+
+
+
+		vector<tinyobj::shape_t> TOshapesA;
+ 		vector<tinyobj::material_t> objMaterialsA;
 		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesB, objMaterialsB, errStr, (resourceDirectory + "/cylinder1.obj").c_str());
+ 		rc = tinyobj::LoadObj(TOshapesA, objMaterialsA, errStr, (resourceDirectory + "/ground.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
 			
-			cylinder1 = make_shared<Shape>();
-			cylinder1->createShape(TOshapesB[0]);
-			cylinder1->measure();
-			cylinder1->init();
-		}
-
-
-
-
-
-
-
-
-
-		vector<tinyobj::shape_t> TOshapesE;
- 		vector<tinyobj::material_t> objMaterialsE;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesE, objMaterialsE, errStr, (resourceDirectory + "/cylinder2.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			cylinder2= make_shared<Shape>();
-			cylinder2->createShape(TOshapesE[0]);
-			cylinder2->measure();
-			cylinder2->init();
+			farground= make_shared<Shape>();
+			farground->createShape(TOshapesA[0]);
+			farground->measure();
+			farground->init();
 		}
 
 
@@ -766,19 +809,6 @@ public:
 
 
 
-		vector<tinyobj::shape_t> TOshapesM;
- 		vector<tinyobj::material_t> objMaterialsM;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesM, objMaterialsM, errStr, (resourceDirectory + "/storagecrate.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			crate= make_shared<Shape>();
-		    crate->createShape(TOshapesM[0]);
-			crate->measure();
-			crate->init();
-		}
 
 
 		vector<tinyobj::shape_t> TOshapesN;
@@ -813,18 +843,20 @@ public:
 		}
 
 
-		vector<tinyobj::shape_t> TOshapesQ;
- 		vector<tinyobj::material_t> objMaterialsQ;
+
+
+		vector<tinyobj::shape_t> TOshapesR;
+ 		vector<tinyobj::material_t> objMaterialsR;
 		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesQ, objMaterialsQ, errStr, (resourceDirectory + "/stair_building.obj").c_str());
+ 		rc = tinyobj::LoadObj(TOshapesR, objMaterialsR, errStr, (resourceDirectory + "/skyscraper.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
 			
-			stair_build= make_shared<Shape>();
-		    stair_build->createShape(TOshapesQ[0]);
-			stair_build->measure();
-			stair_build->init();
+			skyscraper= make_shared<Shape>();
+		    skyscraper->createShape(TOshapesR[0]);
+			skyscraper->measure();
+			skyscraper->init();
 		}
 
 
@@ -833,17 +865,19 @@ public:
         guardrail= loadMultiShape("/multi_shape_guardrail.obj", resourceDirectory);
         scaffolding = loadMultiShape("/scaffolding_multi_shape.obj", resourceDirectory);
         storageunit = loadMultiShape("/multi_shape_storageunit.obj", resourceDirectory);
-
+        crate = loadMultiShape("/storagecrate.obj", resourceDirectory, true);
+        cylinder1= loadMultiShape("/multi_shape_cylinder.obj", resourceDirectory,true);
+        crane = loadMultiShape("/multi_crane.obj", resourceDirectory);
 
         ground = loadSingleShape("/ground.obj", resourceDirectory);
         tiledwall = loadSingleShape("/tiledwall.obj", resourceDirectory);
-        pallet = loadSingleShape("/pallet.obj", resourceDirectory);
+        pallet = loadSingleShape("/pallet.obj", resourceDirectory, true);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
 	}
 
-    multiModel loadMultiShape(const string &filepath, const string &resourceDirectory){
+    multiModel loadMultiShape(const string &filepath, const string &resourceDirectory, bool OBB_flag=false){
         multiModel result;    
 
 		vector<tinyobj::shape_t> TOshapes;
@@ -863,10 +897,20 @@ public:
                 shape->createShape(TOshapes[i]);
                 shape->measure();
                 shape->init();
-                auto box = make_shared<AABB>(shape->min, shape->max);
-                box->init();
                 result.shapes.push_back(shape);
-                result.boxes.push_back(box);
+                if(OBB_flag){
+                    vec3 center = (shape->min + shape->max) * 0.5f; 
+                    vec3 halfWidths = (shape->max - shape->min) * 0.5f;
+                    mat3 orientation = mat3(1.0f);
+                    auto box = make_shared<OBB>(center, halfWidths, orientation);
+                    box->initAxes();
+                    result.OBB_boxes.push_back(box);
+
+                }else{
+                    auto box = make_shared<AABB>(shape->min, shape->max);
+                    box->init();
+                    result.AABB_boxes.push_back(box);
+                }
 
                 //right now automatically adds to collision detection
                 //might want to not automatically and have this on
@@ -887,7 +931,7 @@ public:
         return result;
     }
 
-    singleModel loadSingleShape(const string &filepath, const string &resourceDirectory){
+    singleModel loadSingleShape(const string &filepath, const string &resourceDirectory, bool OBB_flag=false){
         singleModel result;
 
  		string errStr;
@@ -902,12 +946,22 @@ public:
 			shape->createShape(TOshapes[0]);
 			shape->measure();
 			shape->init();
-            auto box = make_shared<AABB>(shape->min, shape->max);
-            box->init();
-            result.box = box;
-            result.shape = shape;
+            if(OBB_flag){
+                vec3 center = (shape->min + shape->max) * 0.5f; 
+                vec3 halfWidths = (shape->max - shape->min) * 0.5f;
+                mat3 orientation = mat3(1.0f);
 
-		}
+                auto box = make_shared<OBB>(center, halfWidths, orientation);
+                box->initAxes();
+                result.OBB_box = box;
+                
+            }else{
+                auto box = make_shared<AABB>(shape->min, shape->max);
+                box->init();
+                result.AABB_box = box;
+            }
+            result.shape = shape;
+        }
         return result;
     }
 
@@ -915,7 +969,7 @@ public:
 	void initGround() {
 
 		float g_groundSize = 400;
-		float g_groundY = -8;
+		float g_groundY = -20;
 
   		// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
 		float GrndPos[] = {
@@ -1084,19 +1138,20 @@ public:
         }else{
             drone.updatePosition(dt);
             drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
+            drone.updateTrickState(dt);
         }
-
 
 		// Apply perspective projection.
 		Projection->pushMatrix();
-		Projection->perspective(45.5f, aspect, 0.01f, 800.0f);
+		Projection->perspective(45.3f, aspect, 0.01f, 800.0f);
 
 		// View is global translation along negative z for now
 		View->pushMatrix();
 		View->loadIdentity();
             
         updateCamera(View, drone.position, drone.orientation, drone.camera_title_angle);
-        
+       
+        glm::mat4 P_ortho= glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
 
         //offload this to function
 
@@ -1110,7 +1165,8 @@ public:
         
         Model->pushMatrix();
             texture1->bind(texProg->getUniform("Texture0"));
-            Model->scale(vec3(400, 400, 400));
+            Model->rotate(PI/2, vec3(0, 1, 0));
+            Model->scale(vec3(600, 600, 600));
             setModel(texProg, Model);
             sphere->draw(texProg);
         Model->popMatrix();
@@ -1120,6 +1176,7 @@ public:
 		glUniformMatrix4fv(bboxProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(bboxProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
         bboxProg->unbind();
+
 
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -1150,28 +1207,30 @@ public:
             //cylinder  in front
             Model->pushMatrix();
                 texture3->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(-3.7, -.2f, 2));
+                Model->translate(vec3(-3.7, -.1f, 2));
                 Model->rotate(-PI/6, vec3(0, 1, 0));//turn
                 Model->rotate(PI/2.7, vec3(1, 0, 0));//rotate on side
                 Model->rotate(PI/2, vec3(0, 0, 1));//flip over
+                Model->scale(vec3(1.2f,1.2f,1.2f));
 
                 //Model->scale(vec3(1, ));
-                resize_and_center(cylinder1->min, cylinder1->max, Model);
+                resize_and_center(cylinder1.gMin, cylinder1.gMax, Model);
                 setModel(texProg, Model);
-                cylinder1->draw(texProg);
+                cylinder1.draw_and_collide(texProg, Model->topMatrix(), drone);
+                
             Model->popMatrix();
 
 
             //cylinder in back
             Model->pushMatrix();
                 texture3->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(-6.5f, -.3f, 1.5));
+                Model->translate(vec3(-7, -.2f, 1.5));
                 Model->rotate(PI/2.7, vec3(1, 0, 0));//rotate on side
                 Model->rotate(PI/2, vec3(0, 0, 1));
-                Model->scale(vec3(.7f,.7f,.7f));
-                resize_and_center(cylinder1->min, cylinder1->max, Model);
+                Model->scale(vec3(.9f,.9f,.9f));
+                resize_and_center(cylinder1.gMin, cylinder1.gMax, Model);
                 setModel(texProg, Model);
-                cylinder1->draw(texProg);
+                cylinder1.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
 
@@ -1183,9 +1242,9 @@ public:
                 Model->rotate(PI/2.7, vec3(1, 0, 0));//rotate on side
                 Model->rotate(PI/2, vec3(0, 0, 1));
                 Model->scale(vec3(1, 3,1));
-                resize_and_center(cylinder1->min, cylinder1->max, Model);
+                resize_and_center(cylinder1.gMin, cylinder1.gMax, Model);
                 setModel(texProg, Model);
-                cylinder1->draw(texProg);
+                cylinder1.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
             //ground
@@ -1322,6 +1381,7 @@ public:
                 resize_and_center(pallet.shape->min, pallet.shape->max, Model);
                 setModel(texProg, Model);
                 pallet.draw_and_collide(texProg, Model->topMatrix(), drone);
+
             Model->popMatrix();
 
             //walls left side
@@ -1473,26 +1533,42 @@ public:
                 tiledwall.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
+
+
             //lower crate
             Model->pushMatrix();
-                Model->translate(vec3(-17, 0.1f, 20));
+                Model->translate(vec3(-17, 0.3f, 20));
                 Model->rotate(PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(6, 6, 6));
                 texture12->bind(texProg->getUniform("Texture0"));
-                resize_and_center(crate->min, crate->max, Model);
+                resize_and_center(crate.gMin, crate.gMax, Model);
                 setModel(texProg, Model);
-                crate->draw(texProg);
+                crate.draw_and_collide(texProg, Model->topMatrix(), drone);
+            Model->popMatrix();
+
+
+            // crate hanging
+            Model->pushMatrix();
+                Model->translate(vec3(-20, 14.5f, 13));
+                Model->rotate(PI/2, vec3(0, 1, 0));
+                Model->rotate(sTheta*.1f, vec3(1, 0, 1));
+
+                Model->scale(vec3(6, 6, 6));
+                texture17->bind(texProg->getUniform("Texture0"));
+                resize_and_center(crate.gMin, crate.gMax, Model);
+                setModel(texProg, Model);
+                crate.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
             Model->pushMatrix();
-                Model->translate(vec3(-9, 6.6f, 20));
+                Model->translate(vec3(-9, 6.8f, 20));
                 Model->rotate(PI/5, vec3(0, 0, 1));
-                Model->rotate(-PI/2.3, vec3(0, 1, 0));
+                Model->rotate(-PI/2.5, vec3(0, 1, 0));
                 Model->scale(vec3(6, 6, 6));
                 texture12->bind(texProg->getUniform("Texture0"));
-                resize_and_center(crate->min, crate->max, Model);
+                resize_and_center(crate.gMin, crate.gMax, Model);
                 setModel(texProg, Model);
-                crate->draw(texProg);
+                crate.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
 
@@ -1584,7 +1660,83 @@ public:
                 resize_and_center(stair_building.gMin, stair_building.gMax, Model);
                 setModel(texProg, Model);
                 stair_building.draw_and_collide(texProg, Model->topMatrix(), drone);
-                
+            Model->popMatrix();
+
+
+            //far ground left most right
+            Model->pushMatrix();
+                texture15->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(-95, 1, -70));
+                Model->rotate(-PI/4, vec3(0, 1, 0));
+                Model->scale(vec3(50, 20, 50));
+                resize_and_center(farground->min, farground->max, Model);
+                setModel(texProg, Model);
+                farground->draw(texProg);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+                texture15->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(-105, 3, -8));
+                Model->scale(vec3(30, 40, 30));
+                resize_and_center(farground->min, farground->max, Model);
+                setModel(texProg, Model);
+                farground->draw(texProg);
+                Model->pushMatrix();
+                    Model->translate(vec3(7, 0, 14));
+                    Model->rotate(PI/4, vec3(0, 1, 0));
+                    setModel(texProg, Model);
+                    farground->draw(texProg);
+                Model->popMatrix();
+            Model->popMatrix();
+
+
+            //flipped farground
+            Model->pushMatrix();
+                texture15->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(95, 1, -70));
+                Model->rotate(PI/4, vec3(0, 1, 0));
+                Model->scale(vec3(50, 20, 50));
+                resize_and_center(farground->min, farground->max, Model);
+                setModel(texProg, Model);
+                farground->draw(texProg);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+                texture15->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(105, 3, -8));
+                Model->scale(vec3(30, 40, 30));
+                resize_and_center(farground->min, farground->max, Model);
+                setModel(texProg, Model);
+                farground->draw(texProg);
+                Model->pushMatrix();
+                    Model->translate(vec3(-7, 0, 14));
+                    Model->rotate(-PI/4, vec3(0, 1, 0));
+                    setModel(texProg, Model);
+                    farground->draw(texProg);
+                Model->popMatrix();
+            Model->popMatrix();
+
+            Model->pushMatrix();
+                texture16->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(-70, 30, -60));
+                Model->scale(vec3(20, 20, 20));
+                resize_and_center(skyscraper->min, skyscraper->max, Model);
+                setModel(texProg, Model);
+                skyscraper->draw(texProg);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+                texture7->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(15, 7, 13));
+                Model->rotate(PI/2, vec3(0, 1, 0));
+                Model->scale(vec3(10, 10, 10));
+                Model->pushMatrix();
+                resize_and_center(crane.gMin, crane.gMax, Model);
+                setModel(texProg, Model);
+                crane.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
 
@@ -1593,6 +1745,9 @@ public:
 
         
         texProg->unbind();
+
+
+
 
 
         Physics::clampToWorld(worldBox, drone);
@@ -1610,6 +1765,33 @@ public:
 		drawGround(texProg);
 
 		texProg->unbind();
+
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        textProg->bind();
+        glUniform1i(textProg->getUniform("text"), 0);
+        glUniformMatrix4fv(textProg->getUniform("P"), 1, GL_FALSE, value_ptr(P_ortho));
+        if(goCamera){
+            Text::RenderText(textProg, "WHOOPS AND HOOPS", 100, 400, .1*sTheta+1, glm::vec3(1, 1, 1), characters);
+            if(!gamepad_connected){
+                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 200, 200, .1*sTheta+1, glm::vec3(1, 0, 0), characters);
+            }
+        }else if (!goCamera && gamepad_connected){
+            int speed = static_cast<int>(length(drone.velocity));
+            Text::RenderText(textProg, string( "SPEED: " + to_string(speed)), 25.0f, 25.0f, .5f, glm::vec3(0.5, 0.8f, 0.2f), characters);
+            Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .5f, glm::vec3(0.5, 0.8f, 0.2f), characters);
+            Text::RenderText(textProg, drone.trick , 25.0f, 125.0f, 1, glm::vec3(0.5, 0.8f, 0.2f), characters);
+        }else if(!goCamera && !gamepad_connected){
+            if(!gamepad_connected){
+                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 100, 400, .1*sTheta+1, glm::vec3(1, 0, 0), characters);
+            }
+        }
+        textProg->unbind();
+        glDisable(GL_BLEND);
+
+        
 		
 		//animation update example
 		sTheta = sin(glfwGetTime());
