@@ -78,23 +78,19 @@ public:
 
 
 
-	shared_ptr<Shape> cementwall;
 
 	shared_ptr<Shape> farground;
 
 
 
-	shared_ptr<Shape> metalfence;
 
 	shared_ptr<Shape> walllong;
 
-	shared_ptr<Shape> telephone_pole;
 
 	shared_ptr<Shape> cube;
 
 
 
-	shared_ptr<Shape> wire;
 
     shared_ptr<Shape> skyscraper;
 
@@ -270,9 +266,13 @@ public:
     multiModel crate;
     multiModel crane;
     multiModel hill;
+    multiModel telephone_pole;
+    multiModel wire;
     singleModel ground;
     singleModel pallet;
     singleModel tiledwall;
+    singleModel cementwall;
+    singleModel metalfence;
 
 
     Drone drone;
@@ -530,8 +530,11 @@ public:
         textProg->setShaderNames(resourceDirectory + "/text_vert.glsl", resourceDirectory + "/text_frag.glsl");
         textProg->init();
         textProg->addUniform("P");
+        textProg->addUniform("M");
         textProg->addUniform("text");
         textProg->addUniform("textColor");
+        textProg->addUniform("uvOffset");
+        textProg->addUniform("uvSize");
         textProg->addAttribute("vertex");
 
 
@@ -776,19 +779,6 @@ public:
 
 
 
-		vector<tinyobj::shape_t> TOshapesF;
- 		vector<tinyobj::material_t> objMaterialsF;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesF, objMaterialsF, errStr, (resourceDirectory + "/cementwall.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			cementwall= make_shared<Shape>();
-			cementwall->createShape(TOshapesF[0]);
-			cementwall->measure();
-			cementwall->init();
-		}
 
 
 
@@ -798,19 +788,6 @@ public:
 
 
 
-		vector<tinyobj::shape_t> TOshapesJ;
- 		vector<tinyobj::material_t> objMaterialsJ;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesJ, objMaterialsJ, errStr, (resourceDirectory + "/metalfence.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			metalfence= make_shared<Shape>();
-		    metalfence->createShape(TOshapesJ[0]);
-			metalfence->measure();
-			metalfence->init();
-		}
 
 		vector<tinyobj::shape_t> TOshapesK;
  		vector<tinyobj::material_t> objMaterialsK;
@@ -832,36 +809,8 @@ public:
 
 
 
-		vector<tinyobj::shape_t> TOshapesN;
- 		vector<tinyobj::material_t> objMaterialsN;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesN, objMaterialsN, errStr, (resourceDirectory + "/telephone_pole.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			telephone_pole= make_shared<Shape>();
-		    telephone_pole->createShape(TOshapesN[0]);
-			telephone_pole->measure();
-			telephone_pole->init();
-		}
 
 
-
-
-		vector<tinyobj::shape_t> TOshapesP;
- 		vector<tinyobj::material_t> objMaterialsP;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesP, objMaterialsP, errStr, (resourceDirectory + "/wire.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			wire= make_shared<Shape>();
-		    wire->createShape(TOshapesP[0]);
-			wire->measure();
-			wire->init();
-		}
 
 
 
@@ -890,10 +839,16 @@ public:
         cylinder1= loadMultiShape("/multi_shape_cylinder.obj", resourceDirectory,true);
         crane = loadMultiShape("/multi_crane.obj", resourceDirectory);
         hill = loadMultiShape("/hill.obj", resourceDirectory);
+        wire = loadMultiShape("/wire.obj", resourceDirectory);
+
+
+        telephone_pole = loadMultiShape("/telephone_pole.obj", resourceDirectory);
 
         ground = loadSingleShape("/ground.obj", resourceDirectory);
         tiledwall = loadSingleShape("/tiledwall.obj", resourceDirectory);
         pallet = loadSingleShape("/pallet.obj", resourceDirectory, true);
+        cementwall = loadSingleShape("/cementwall.obj", resourceDirectory );
+        metalfence = loadSingleShape("/metalfence.obj", resourceDirectory);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
@@ -1464,14 +1419,14 @@ public:
                 Model->translate(vec3(4.2f, 1.2f, 0));
                 Model->rotate(PI/2, vec3(0, 1, 0));
                 Model->scale(vec3(7, 9, 7));
-                resize_and_center(cementwall->min, cementwall->max, Model);
+                resize_and_center(cementwall.shape->min, cementwall.shape->max, Model);
                 setModel(texProg, Model);
-                cementwall->draw(texProg);
+                cementwall.draw_and_collide(texProg, Model->topMatrix(), drone);
                 Model->pushMatrix();
                     Model->translate(vec3(-24, 0, 0));
                     Model->scale(vec3(1.5, 1, 1));
                     setModel(texProg, Model);
-                    cementwall->draw(texProg);
+                    cementwall.draw_and_collide(texProg, Model->topMatrix(), drone);
                 Model->popMatrix();
             Model->popMatrix();
 
@@ -1577,14 +1532,14 @@ public:
                     Model->translate(vec3(38, 2, -5));
                     Model->rotate(-PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3, 3, 3));
-                    resize_and_center(metalfence->min, metalfence->max, Model);
+                    resize_and_center(metalfence.shape->min, metalfence.shape->max, Model);
                     setModel(texProg, Model);
-                    metalfence->draw(texProg);
+                    metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->pushMatrix();
                         texture9->bind(texProg->getUniform("Texture0"));
                         Model->translate(vec3(8.5f, 0, 0));
                         setModel(texProg, Model);
-                        metalfence->draw(texProg);
+                        metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->popMatrix();
                 Model->popMatrix();
 
@@ -1594,14 +1549,14 @@ public:
                     Model->translate(vec3(38, 2, 14));
                     Model->rotate(-PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3, 3, 3));
-                    resize_and_center(metalfence->min, metalfence->max, Model);
+                    resize_and_center(metalfence.shape->min, metalfence.shape->max, Model);
                     setModel(texProg, Model);
-                    metalfence->draw(texProg);
+                    metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->pushMatrix();
                         texture9->bind(texProg->getUniform("Texture0"));
                         Model->translate(vec3(8.5f, 0, 0));
                         setModel(texProg, Model);
-                        metalfence->draw(texProg);
+                        metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->popMatrix();
                 Model->popMatrix();
 
@@ -1639,14 +1594,14 @@ public:
                     Model->translate(vec3(-40, 2, 1));
                     Model->rotate(PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3, 3, 3));
-                    resize_and_center(metalfence->min, metalfence->max, Model);
+                    resize_and_center(metalfence.shape->min, metalfence.shape->max, Model);
                     setModel(texProg, Model);
-                    metalfence->draw(texProg);
+                    metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->pushMatrix();
                         texture9->bind(texProg->getUniform("Texture0"));
                         Model->translate(vec3(8.5f, 0, 0));
                         setModel(texProg, Model);
-                        metalfence->draw(texProg);
+                        metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->popMatrix();
                 Model->popMatrix();
 
@@ -1656,14 +1611,14 @@ public:
                     Model->translate(vec3(-40, 2, 14));
                     Model->rotate(PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3, 3, 3));
-                    resize_and_center(metalfence->min, metalfence->max, Model);
+                    resize_and_center(metalfence.shape->min, metalfence.shape->max, Model);
                     setModel(texProg, Model);
-                    metalfence->draw(texProg);
+                    metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->pushMatrix();
                         texture9->bind(texProg->getUniform("Texture0"));
                         Model->translate(vec3(-8.5f, 0, 0));
                         setModel(texProg, Model);
-                        metalfence->draw(texProg);
+                        metalfence.draw_and_collide(texProg, Model->topMatrix(), drone);
                     Model->popMatrix();
                 Model->popMatrix();
 
@@ -1733,7 +1688,7 @@ public:
 
             // crate hanging
             Model->pushMatrix();
-                Model->translate(vec3(-20, 14.5f, 13));
+                Model->translate(vec3(-20, 15, 13));
                 Model->rotate(PI/2, vec3(0, 1, 0));
                 Model->rotate(sTheta*.1f, vec3(1, 0, 1));
 
@@ -1763,9 +1718,9 @@ public:
                 Model->rotate(-PI/3, vec3(0, 1, 0));
                 Model->scale(vec3(6, 6, 6));
                 texture13->bind(texProg->getUniform("Texture0"));
-                resize_and_center(telephone_pole->min, telephone_pole->max, Model);
+                resize_and_center(telephone_pole.gMin, telephone_pole.gMax, Model);
                 setModel(texProg, Model);
-                telephone_pole->draw(texProg);
+                telephone_pole.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
 
@@ -1775,9 +1730,9 @@ public:
                 Model->rotate(-PI/3, vec3(0, 1, 0));
                 Model->scale(vec3(6, 6, 6));
                 texture13->bind(texProg->getUniform("Texture0"));
-                resize_and_center(telephone_pole->min, telephone_pole->max, Model);
+                resize_and_center(telephone_pole.gMin, telephone_pole.gMax, Model);
                 setModel(texProg, Model);
-                telephone_pole->draw(texProg);
+                telephone_pole.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
 
@@ -1787,9 +1742,9 @@ public:
                 Model->rotate(-PI/3, vec3(0, 1, 0));
                 Model->scale(vec3(6, 6, 6));
                 texture13->bind(texProg->getUniform("Texture0"));
-                resize_and_center(telephone_pole->min, telephone_pole->max, Model);
+                resize_and_center(telephone_pole.gMin, telephone_pole.gMax, Model);
                 setModel(texProg, Model);
-                telephone_pole->draw(texProg);
+                telephone_pole.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
             //on right of storage unti
@@ -1798,9 +1753,9 @@ public:
                 Model->rotate(-PI/3, vec3(0, 1, 0));
                 Model->scale(vec3(6, 6, 6));
                 texture13->bind(texProg->getUniform("Texture0"));
-                resize_and_center(telephone_pole->min, telephone_pole->max, Model);
+                resize_and_center(telephone_pole.gMin, telephone_pole.gMax, Model);
                 setModel(texProg, Model);
-                telephone_pole->draw(texProg);
+                telephone_pole.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
             //scaffolding
@@ -1816,9 +1771,35 @@ public:
 
 
             Model->pushMatrix();
-                resize_and_center(wire->min, wire->max, Model);
+                texture8->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(2, 11, -7));
+                Model->rotate(PI/2, vec3(0, 1, 0));
+                Model->scale(vec3(2, 2, 25));
+                resize_and_center(wire.gMin, wire.gMax, Model);
                 setModel(texProg, Model);
-                wire->draw(texProg);
+                wire.draw_and_collide(texProg, Model->topMatrix(), drone);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+                texture8->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(30, 11, -11));
+                Model->rotate(-PI/3, vec3(0, 1, 0));
+                Model->scale(vec3(2, 2, 9));
+                resize_and_center(wire.gMin, wire.gMax, Model);
+                setModel(texProg, Model);
+                wire.draw_and_collide(texProg, Model->topMatrix(), drone);
+            Model->popMatrix();
+
+
+            Model->pushMatrix();
+                texture8->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(-31, 11, -10));
+                Model->rotate(PI/3, vec3(0, 1, 0));
+                Model->scale(vec3(2, 2, 9));
+                resize_and_center(wire.gMin, wire.gMax, Model);
+                setModel(texProg, Model);
+                wire.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
 
@@ -1924,9 +1905,9 @@ public:
 
             Model->pushMatrix();
                 texture7->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(15, 7, 13));
+                Model->translate(vec3(15, 6.7, 13));
                 Model->rotate(PI/2, vec3(0, 1, 0));
-                Model->scale(vec3(10, 10, 10));
+                Model->scale(vec3(10, 11, 10));
                 resize_and_center(crane.gMin, crane.gMax, Model);
                 setModel(texProg, Model);
                 crane.draw_and_collide(texProg, Model->topMatrix(), drone);
@@ -1987,9 +1968,9 @@ public:
             Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
             Text::RenderText(textProg, "SCORE:", 25.0f, 550.0f, .75f, glm::vec3(1, 1, 1), characters);
-            Text::RenderText(textProg, "60,000", 40.0f, 500.0f, 1, glm::vec3(1, 1, 0), characters);
+            Text::RenderText(textProg, to_string(drone.score), 40.0f, 500.0f, 1, glm::vec3(1, 1, 0), characters);
 
-            Text::RenderText(textProg, drone.trick, 400.0f, 75.0f, .5f, glm::vec3(1, 1, 0), characters);
+            Text::RenderText(textProg, drone.trick, 300.0f, 50.0f, .5f, glm::vec3(1, 1, 0), characters);
             //Text::RenderText(textProg, drone.trick , 25.0f, 125.0f, 1, glm::vec3(0.5, 0.8f, 0.2f), characters);
         }else if(!goCamera && !gamepad_connected){
             if(!gamepad_connected){

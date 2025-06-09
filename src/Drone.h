@@ -21,12 +21,15 @@ struct Drone {
     float camera_title_angle = 25;
 
     std::string trick = "";
+    int string_count = 0;
+    int score = 0;
 
     //prob move this to another struct
     float rollInput = 0.0f;
     float pitchInput = 0.0f;
     float yawInput = 0.0f;
     float throttle = 0.0;
+
 
     //trick detector
     float rollAcum = 0.0f;
@@ -37,6 +40,7 @@ struct Drone {
     float dRoll= 0.0f;
     bool intrick = false;
     bool diving = false;
+    bool diveTextAdded = false;
     float timeSinceLastTrick = 0.0f;
     float rollTimer = 0.0f;
     float pitchTimer = 0.0f;
@@ -82,6 +86,19 @@ struct Drone {
        dPitch= glm::degrees(eulerDelta.x);
        dYaw= glm::degrees(eulerDelta.y);
        timeSinceLastTrick += dt; 
+       static std::string last_trick = "";
+
+       if(timeSinceLastTrick > 8){
+            score = 0;
+            trick = "";
+            string_count = 0;
+            timeSinceLastTrick = 0; 
+       }
+
+       if(string_count > 3){
+           string_count = 1;
+           trick = last_trick; 
+       }
 
 
        //these ensure threshold for the trick to be done within
@@ -107,8 +124,14 @@ struct Drone {
 
        //this checks if the delta in each axis is a full rotation 
        //and the timer for each axis has not exceeded the maxTricktime
-       if(abs(rollAcum) >= 335.0f && rollTimer <= maxTricktime){
-           trick = "barrel roll!";
+       if(abs(rollAcum) >= 320.0f && rollTimer <= maxTricktime){
+           score += 200;
+           string_count += 1;
+           if(string_count > 1){
+               trick += " + ";
+           }
+           trick += "barrel roll!";
+           last_trick = "barrel roll!";
            rollAcum = 0.0f;
            rollTimer = 0.0f;
            timeSinceLastTrick = 0.0f;
@@ -118,8 +141,13 @@ struct Drone {
         rollTimer = 0.0f;
         }
 
-       if(abs(pitchAcum) >= 335.0f && pitchTimer <= maxTricktime){
-           trick = "Front/Back flip!";
+       if(abs(pitchAcum) >= 320.0f && pitchTimer <= maxTricktime){
+           score += 400;
+           string_count += 1;
+           if(string_count > 1){
+                trick += " + ";
+           }
+           trick += "Front/Back flip!";
            pitchAcum= 0.0f;
            pitchTimer = 0.0f;
            timeSinceLastTrick = 0.0f;
@@ -129,13 +157,41 @@ struct Drone {
        }
 
        if(abs(yawAcum) >= 360.0f && yawTimer <= maxTricktime){
-           trick = "Yaw Spin!";
+           score += 100;
+           string_count += 1;
+           if(string_count > 1){
+                trick += " + ";
+           }
+           trick += "Yaw Spin!";
+           last_trick = "Yaw Spin!";
            yawAcum = 0.0f;
            yawTimer = 0.0f;
            timeSinceLastTrick = 0.0f;
        }else if(yawTimer > maxTricktime){
            yawTimer = 0.0f;
            yawAcum = 0.0f;
+       }
+
+       if(velocity.y < -40){
+           if(!diving){
+               diving = true;
+                diveTextAdded = false;
+           }
+           score += 10;
+
+           if(!diveTextAdded){
+               string_count += 1;
+               if(string_count > 1){
+                    trick += " + ";
+               }
+               trick += "Dive!";
+               last_trick = "Dive!";
+               timeSinceLastTrick = 0.0f;
+               diveTextAdded = true;
+           }
+       }else{
+           diving = false;
+           diveTextAdded = false;
        }
        prevorientation = orientation;
     }
