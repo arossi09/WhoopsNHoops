@@ -1,6 +1,4 @@
 /*
- * Program 3 base code - includes modifications to shape and initGeom in preparation to load
- * multi shape objects 
  * CSC 471 Cal Poly Z. Wood + S. Sueda + I. Dunn
  */
 
@@ -58,40 +56,18 @@ public:
 
 	WindowManager * windowManager = nullptr;
 
-	// Our shader program - use this one for Blinn-Phong
+	// Our shader program 
 	std::shared_ptr<Program> prog;
-
 	std::shared_ptr<Program> cellProg;
-
 	std::shared_ptr<Program> textProg;
-
 	std::shared_ptr<Program> bboxProg;
-
-	//Our shader program for textures
 	std::shared_ptr<Program> texProg;
-
 	std::shared_ptr<Program> solidProg;
 
 	//our geometry
 	shared_ptr<Shape> sphere;
-
-
-
-
-
 	shared_ptr<Shape> farground;
-
-
-
-
-	shared_ptr<Shape> walllong;
-
-
 	shared_ptr<Shape> cube;
-
-
-
-
     shared_ptr<Shape> skyscraper;
 
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
@@ -217,16 +193,13 @@ public:
                    }else{
                        AABB transformedBox = AABB_boxes[i]->transformed(Model);
                        Physics::handleCollision(transformedBox, drone);
+
                    }
-                   //create a copy of box and push to enable multiple of the same
-                   //AABB
-                   //AABB transformedBox = boxes[i]->transformed(Model);
-                   //transformedBox.init();
-                   //causing lots of lag
-                   //transformedBox.init();
                 }
             }
         }
+
+
     };
 
 
@@ -273,6 +246,7 @@ public:
     singleModel tiledwall;
     singleModel cementwall;
     singleModel metalfence;
+    singleModel walllong;
 
 
     Drone drone;
@@ -509,6 +483,7 @@ public:
         solidProg->addUniform("M");
         solidProg->addUniform("color");
         solidProg->addAttribute("vertPos");
+        solidProg->addAttribute("vertNor");
          
 
 
@@ -757,12 +732,6 @@ public:
 			sphere->init();
 		}
 
-
-
-
-
-
-
 		vector<tinyobj::shape_t> TOshapesA;
  		vector<tinyobj::material_t> objMaterialsA;
 		//load in the mesh and make the shape(s)
@@ -776,44 +745,6 @@ public:
 			farground->measure();
 			farground->init();
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-		vector<tinyobj::shape_t> TOshapesK;
- 		vector<tinyobj::material_t> objMaterialsK;
-		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesK, objMaterialsK, errStr, (resourceDirectory + "/walllong.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			
-			walllong= make_shared<Shape>();
-		    walllong->createShape(TOshapesK[0]);
-			walllong->measure();
-			walllong->init();
-		}
-
-
-
-
-
-
-
-
-
-
-
-
 
 		vector<tinyobj::shape_t> TOshapesR;
  		vector<tinyobj::material_t> objMaterialsR;
@@ -849,6 +780,7 @@ public:
         pallet = loadSingleShape("/pallet.obj", resourceDirectory, true);
         cementwall = loadSingleShape("/cementwall.obj", resourceDirectory );
         metalfence = loadSingleShape("/metalfence.obj", resourceDirectory);
+        walllong = loadSingleShape("/walllong.obj", resourceDirectory,true);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
@@ -880,12 +812,12 @@ public:
                     vec3 halfWidths = (shape->max - shape->min) * 0.5f;
                     mat3 orientation = mat3(1.0f);
                     auto box = make_shared<OBB>(center, halfWidths, orientation);
-                    box->initAxes();
+                    //box->initAxes();
                     result.OBB_boxes.push_back(box);
 
                 }else{
                     auto box = make_shared<AABB>(shape->min, shape->max);
-                    box->init();
+                    //box->init();
                     result.AABB_boxes.push_back(box);
                 }
 
@@ -929,12 +861,12 @@ public:
                 mat3 orientation = mat3(1.0f);
 
                 auto box = make_shared<OBB>(center, halfWidths, orientation);
-                box->initAxes();
+                //box->initAxes();
                 result.OBB_box = box;
                 
             }else{
                 auto box = make_shared<AABB>(shape->min, shape->max);
-                box->init();
+                //box->init();
                 result.AABB_box = box;
             }
             result.shape = shape;
@@ -945,7 +877,7 @@ public:
 	//directly pass quad for the ground to the GPU
 	void initGround() {
 
-		float g_groundSize = 400;
+		float g_groundSize = 600;
 		float g_groundY = -20;
 
   		// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
@@ -1157,6 +1089,7 @@ public:
 		glUniformMatrix4fv(bboxProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
         bboxProg->unbind();
 
+        //draw the drone
         if(!goCamera){
         solidProg->bind();
         glUniformMatrix4fv(solidProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -1164,6 +1097,7 @@ public:
         //glUniformMatrix4fv(solidProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
         //glUniform3f(solidProg->getUniform("lightPos"), 2.0+lightTrans, 2.0+lightTrans, 2.9+lightTrans);
         Model->pushMatrix();
+
         static float propellerAngle = 0.0f;
         float spinSpeed = 360.0f * drone.throttle;
         propellerAngle += spinSpeed * dt;
@@ -1567,9 +1501,9 @@ public:
                     Model->translate(vec3(37, 2, -10.75));
                     Model->rotate(-PI/3, vec3(0, 1, 0));
                     Model->scale(vec3(3.5f, 3.5f, 3.5f));
-                    resize_and_center(walllong->min, walllong->max, Model);
+                    resize_and_center(walllong.shape->min, walllong.shape->max, Model);
                     setModel(texProg, Model);
-                    walllong->draw(texProg);
+                    walllong.draw_and_collide(texProg, Model->topMatrix(), drone);
                 Model->popMatrix();
 
                 Model->pushMatrix();
@@ -1577,9 +1511,9 @@ public:
                     Model->translate(vec3(38.5f, 2, 7.5f));
                     Model->rotate(PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3.5f, 3.5f, 3.5f));
-                    resize_and_center(walllong->min, walllong->max, Model);
+                    resize_and_center(walllong.shape->min, walllong.shape->max, Model);
                     setModel(texProg, Model);
-                    walllong->draw(texProg);
+                    walllong.draw_and_collide(texProg, Model->topMatrix(), drone);
                 Model->popMatrix();
 
             Model->popMatrix();
@@ -1633,9 +1567,9 @@ public:
                     Model->translate(vec3(-39, 2, -10.75));
                     Model->rotate(PI/3, vec3(0, 1, 0));
                     Model->scale(vec3(3.5f, 3.5f, 3.5f));
-                    resize_and_center(walllong->min, walllong->max, Model);
+                    resize_and_center(walllong.shape->min, walllong.shape->max, Model);
                     setModel(texProg, Model);
-                    walllong->draw(texProg);
+                    walllong.draw_and_collide(texProg, Model->topMatrix(), drone);
                 Model->popMatrix();
 
                 Model->pushMatrix();
@@ -1643,9 +1577,9 @@ public:
                     Model->translate(vec3(-40.5f, 2, 7.5f));
                     Model->rotate(PI/2, vec3(0, 1, 0));
                     Model->scale(vec3(3.5f, 3.5f, 3.5f));
-                    resize_and_center(walllong->min, walllong->max, Model);
+                    resize_and_center(walllong.shape->min, walllong.shape->max, Model);
                     setModel(texProg, Model);
-                    walllong->draw(texProg);
+                    walllong.draw_and_collide(texProg, Model->topMatrix(), drone);
                 Model->popMatrix();
 
             Model->popMatrix();
@@ -1958,9 +1892,10 @@ public:
         glUniform1i(textProg->getUniform("text"), 0);
         glUniformMatrix4fv(textProg->getUniform("P"), 1, GL_FALSE, value_ptr(P_ortho));
         if(goCamera){
-            Text::RenderText(textProg, "WHOOPS AND HOOPS", 100, 400, .1*sTheta+1, glm::vec3(1, 1, 1), characters);
+            Text::RenderText(textProg, "WHOOPS AND HOOPS", 100, 500, .1*sTheta+1, glm::vec3(1, 1, 1), characters);
+            Text::RenderText(textProg, "Press G to start", 250, 100, .7, glm::vec3(0, 1, 0), characters);
             if(!gamepad_connected){
-                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 200, 200, .1*sTheta+1, glm::vec3(1, 0, 0), characters);
+                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 225, 50, .7, glm::vec3(1, 0, 0), characters);
             }
         }else if (!goCamera && gamepad_connected){
             int speed = static_cast<int>(length(drone.velocity));
@@ -1970,11 +1905,11 @@ public:
             Text::RenderText(textProg, "SCORE:", 25.0f, 550.0f, .75f, glm::vec3(1, 1, 1), characters);
             Text::RenderText(textProg, to_string(drone.score), 40.0f, 500.0f, 1, glm::vec3(1, 1, 0), characters);
 
-            Text::RenderText(textProg, drone.trick, 300.0f, 50.0f, .5f, glm::vec3(1, 1, 0), characters);
+            Text::RenderText(textProg, drone.trick, 250.0f, 50.0f, .5f, glm::vec3(1, 1, 0), characters);
             //Text::RenderText(textProg, drone.trick , 25.0f, 125.0f, 1, glm::vec3(0.5, 0.8f, 0.2f), characters);
         }else if(!goCamera && !gamepad_connected){
             if(!gamepad_connected){
-                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 100, 400, .1*sTheta+1, glm::vec3(1, 0, 0), characters);
+                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 225, 50, .7, glm::vec3(1, 0, 0), characters);
             }
         }
         textProg->unbind();

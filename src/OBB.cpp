@@ -7,6 +7,7 @@
 OBB::OBB(glm::vec3 &center, glm::vec3 &halfWidths, glm::mat3 orientation) :
     center(center), halfWidths(halfWidths), orientation(orientation){};
 
+//this does not work too well
 bool OBB::intersects(const OBB &other) const {
    const float EPSILON = 1e-6;
    glm::mat3 R, AbsR;

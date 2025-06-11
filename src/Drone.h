@@ -45,7 +45,7 @@ struct Drone {
     float rollTimer = 0.0f;
     float pitchTimer = 0.0f;
     float yawTimer = 0.0f;
-    float maxTricktime = 1.5f;
+    float maxTricktime = 2;
 
     AABB getAABB() const {
         float halfSize = .7f;  
