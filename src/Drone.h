@@ -1,6 +1,7 @@
 #ifndef DRONE_H
 #define DRONE_H
 
+#include <string>
 #include <glm/glm.hpp>
 #include "AABB.h"
 
