@@ -1,4 +1,6 @@
+.DS_Store
 build/
 x64/
 .vs/
 ext/.DS_Store
+.travis.yml
