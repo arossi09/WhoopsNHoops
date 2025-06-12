@@ -16,4 +16,6 @@ void main() {
     vec3 lightPos_cam = vec3(V * vec4(lightPos, 1.0));
     light_dir_cam = normalize(lightPos_cam - vec3(V * M * vec4(vertPos, 1.0)));
     gl_Position = P * V * M * vec4(vertPos, 1.0);
+
+
 }
