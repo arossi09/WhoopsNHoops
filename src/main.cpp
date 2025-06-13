@@ -30,6 +30,8 @@
 #include "Spline.h"
 #include "OBB.h"
 #include "Text.h"
+#include "Entity.h"
+#include "Lipo.h"
 
 #define PI 3.14
 
@@ -222,8 +224,7 @@ public:
     singleModel cementwall;
     singleModel metalfence;
     singleModel walllong;
-    singleModel lipo;
-
+    std::shared_ptr<Lipo> lipo_test;
 
     Drone drone;
 
@@ -390,6 +391,8 @@ public:
 
 	void init(const std::string& resourceDirectory)
 	{
+
+        lipo_test = make_shared<Lipo>(vec3(0, 0, 0), resourceDirectory);
 		GLSL::checkVersion();
 
 		// Set background color.
@@ -712,7 +715,6 @@ public:
         cementwall = loadSingleShape("/cementwall.obj", resourceDirectory );
         metalfence = loadSingleShape("/metalfence.obj", resourceDirectory);
         walllong = loadSingleShape("/walllong.obj", resourceDirectory,true);
-        lipo = loadSingleShape("/1slipo.obj", resourceDirectory);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
@@ -1770,14 +1772,15 @@ public:
                 hill.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
+            //lipo
             Model->pushMatrix();
                 texture19->bind(texProg->getUniform("Texture0"));
                 Model->translate(vec3(0, sTheta*.5, 0));
-                resize_and_center(lipo.shape->min, lipo.shape->max, Model);
+                resize_and_center(lipo_test->shape->min, lipo_test->shape->max, Model);
                 setModel(texProg, Model);
-                lipo.draw_and_collide(texProg, Model->topMatrix(), drone);
-
+                lipo_test->draw(texProg);
             Model->popMatrix();
+
         Model->popMatrix();
         
         texProg->unbind();
