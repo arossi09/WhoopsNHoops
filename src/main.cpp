@@ -7,18 +7,13 @@
 //TODO
 //finish scene
 //fix OBB
-//add collectable propellers
 //fix text class
 
-//I could make a shape array to load each shape and then have enums
-//for the index with the name being the index for that object
 //TODO 
-//make it so the obstacles are cell shaded solid colors
-//Text generation using a namespace
-//implement OBB
-//
-//
+//Make it so static aabbs/obbs are not remade every frame
+//add collectable lipos
 //I could pass  the bboxProg to draw_and_collid eto also draw the bbox
+//
 #include <iostream>
 #include <glad/glad.h>
 #include <chrono>
@@ -80,46 +75,27 @@ public:
 
 	//the image to use as a texture (ground)
 	shared_ptr<Texture> texture0;
-
 	shared_ptr<Texture> texture1;
-
 	shared_ptr<Texture> texture2;
-
 	shared_ptr<Texture> texture3;
-
 	shared_ptr<Texture> texture4;
-
 	shared_ptr<Texture> texture5;
-
 	shared_ptr<Texture> texture6;
-
     shared_ptr<Texture> texture7;
-    
     shared_ptr<Texture> texture8;
-
     shared_ptr<Texture> texture9;
-
     shared_ptr<Texture> texture10;
-
     shared_ptr<Texture> texture11;
-
     shared_ptr<Texture> texture12;
-
     shared_ptr<Texture> texture13;
-
     shared_ptr<Texture> texture14;
-
     shared_ptr<Texture> texture15;
-
     shared_ptr<Texture> texture16;
-
     shared_ptr<Texture> texture17;
     shared_ptr<Texture> texture18;
-
-
+    shared_ptr<Texture> texture19;
 
     vector <shared_ptr<Shape>> shapes;
-
     map<char, Character> characters;
 
     //example data that might be useful when trying to compute bounds on multi-shape
@@ -128,8 +104,6 @@ public:
     vec3 gPos;
     vec3 gCenter = vec3(0, 0, 0);
     float radius = 100;
-
-
 
     float phi = 0.0f;
     float theta = PI/2;
@@ -146,12 +120,12 @@ public:
     float gCamH = 0;
     float sensitivity = .1 ;
     //animation data
-    float lightTrans = 0;
     float gTrans = -3;
     float sTheta = 0;
     float cTheta = 0;
     float eTheta = 0;
     float hTheta = 0;
+    bool debugCam = false;
 
 
     vector<shared_ptr<AABB>> draw_boxes;
@@ -248,38 +222,13 @@ public:
     singleModel cementwall;
     singleModel metalfence;
     singleModel walllong;
+    singleModel lipo;
 
 
     Drone drone;
 
     AABB worldBox = AABB(vec3(-170,-20,-170), vec3(170, 200, 250));
 
-    Material Material1 = {
-        vec3(0.046f, 0.046f, 0.045f),  // ambient (dim gray)
-        vec3(0.46f, 0.46f, 0.45f),     // diffuse (light gray)
-        vec3(0.45f, 0.43f, 0.45f),     // specular (soft silver)
-        120.0f                         // shininess (sharp highlight)
-    };
-
-    Material Material2 = {
-        vec3(0.1f, 0.05f, 0.05f),      // ambient (reddish low light)
-        vec3(0.7f, 0.2f, 0.2f),        // diffuse (red tone)
-        vec3(0.8f, 0.3f, 0.3f),        // specular (shiny red highlight)
-        64.0f                          // shininess (less sharp)
-    };
-
-    Material Material3 = {
-        vec3(0.02f, 0.05f, 0.1f),      // ambient (cool blue)
-        vec3(0.2f, 0.4f, 0.7f),        // diffuse (blue tone)
-        vec3(0.4f, 0.6f, 0.9f),        // specular (strong blue highlight)
-        16.0f                          // shininess (soft and wide highlight)
-    };
-
-
-
-
-
-        //stack for shapes
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -320,10 +269,7 @@ public:
 
 
 		if (key == GLFW_KEY_Q && action == GLFW_PRESS){
-			lightTrans += 1.25;
-		}
-		if (key == GLFW_KEY_E && action == GLFW_PRESS){
-			lightTrans -= 1.25;
+            debugCam = !debugCam;
 		}
 		if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -346,11 +292,13 @@ public:
     //gather the deltaX and deltaY on scroll and change the phi and theta
     //based off the sensitivity
     void scrollCallback(GLFWwindow *window, double deltaX, double deltaY){
-       phi -= deltaY * sensitivity;
-       theta += deltaX * sensitivity;
-       if(phi > 80) phi = 80;
-       if(phi < -80) phi = -80;
-       //drone.updateMouseOrientation(phi, theta, .005);
+       if(debugCam){
+           phi -= deltaY * sensitivity;
+           theta += deltaX * sensitivity;
+           if(phi > 80) phi = 80;
+           if(phi < -80) phi = -80;
+           drone.updateMouseOrientation(phi, theta, .005);
+       }
     }
 
     //stold this from betaflight :p
@@ -375,7 +323,6 @@ public:
         }
     }
 
-
     void updateCamera(shared_ptr<MatrixStack> &view, Drone &drone){
         vec3 direction = drone.orientation * vec3(0, 0, -1);
         vec3 eye = drone.position;
@@ -386,7 +333,6 @@ public:
         //to where camera is 
         //view->lookAt(eye, eye+direction, vec3(0, 1, 0));
     }
-
 
     float calculateDeltaTime(){
         using clock = chrono::high_resolution_clock;
@@ -399,9 +345,7 @@ public:
         return delta.count();
     }
 
-
     void updateUsingCameraPath(float frametime)  {
-
    	  if (goCamera) {
        if(!splinepath[currentSpline].isDone()){
        		splinepath[currentSpline].update(frametime);
@@ -424,17 +368,13 @@ public:
     //update camera location and orrientation based off drone
     void updateCamera(shared_ptr<MatrixStack> &view, 
             vec3 drone_position, quat drone_orientation, float drone_camera_angle){
-       
         //rotate around x axis to pitch
         quat cameraPitch = angleAxis(radians(drone_camera_angle), vec3(1, 0, 0));
-
         quat cameraOrientation = drone_orientation * cameraPitch;
-
         vec3 eye = drone_position;
         vec3 forward = cameraOrientation* vec3(0.0f, 0.0f, -1.0f);
         vec3 up      = cameraOrientation* vec3(0.0f, 1.0f,  0.0f);
         //to where camera is 
-       
         if(goCamera){
             view->lookAt(gPos, gCenter, vec3(0, 1, 0));
         }else{
@@ -460,6 +400,7 @@ public:
         splinepath[0] = Spline(glm::vec3(-radius, 10, -radius), glm::vec3(-radius,15,-radius), glm::vec3(radius, 15, -radius), glm::vec3(radius,10,-radius), 5);
         splinepath[1] = Spline(glm::vec3(-45, 20, 10), glm::vec3(0), glm::vec3(0), glm::vec3(-45, 20, -10), 10);
         splinepath[2] = Spline(glm::vec3(150, 10, 10), glm::vec3(150, 10, 10), glm::vec3(150, 10, -20), glm::vec3(150, 10, -20), 10);
+
         //this is for phongg shading flat
 		prog = make_shared<Program>();
 		prog->setVerbose(true);
@@ -485,8 +426,6 @@ public:
         solidProg->addUniform("color");
         solidProg->addAttribute("vertPos");
         solidProg->addAttribute("vertNor");
-         
-
 
         //cell shading
 		cellProg = make_shared<Program>();
@@ -533,6 +472,7 @@ public:
 		texProg->addAttribute("vertNor");
 		texProg->addAttribute("vertTex");
 
+        //we need this program in case of wanting to draw bounding box 
         bboxProg = make_shared<Program>();
         bboxProg->setVerbose(true);
         bboxProg->setShaderNames(resourceDirectory + "/silhoutte_vert.glsl", resourceDirectory + "/silhoutte_frag.glsl");
@@ -543,15 +483,13 @@ public:
         bboxProg->addAttribute("vertPos");
 
 
-		//read in a load the texture
+        //we need to load in all of the textures
 		texture0 = make_shared<Texture>();
   		texture0->setFilename(resourceDirectory + "/house.png");
   		texture0->init();
   		texture0->setUnit(0);
   		texture0->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture0->setFiltering(GL_NEAREST, GL_NEAREST);
-
-
 
 		texture1 = make_shared<Texture>();
   		texture1->setFilename(resourceDirectory + "/sky_28_2k.png");
@@ -560,15 +498,12 @@ public:
   		texture1->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture1->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
-
 		texture2 = make_shared<Texture>();
   		texture2->setFilename(resourceDirectory + "/ground.png");
   		texture2->init();
   		texture2->setUnit(2);
   		texture2->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture2->setFiltering(GL_NEAREST, GL_NEAREST);
-
 
 		texture3 = make_shared<Texture>();
   		texture3->setFilename(resourceDirectory + "/wall.png");
@@ -577,14 +512,12 @@ public:
   		texture3->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture3->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
 		texture4 = make_shared<Texture>();
   		texture4->setFilename(resourceDirectory + "/concretewall.png");
   		texture4->init();
   		texture4->setUnit(3);
   		texture4->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture4->setFiltering(GL_NEAREST, GL_NEAREST);
-
 
 		texture5 = make_shared<Texture>();
   		texture5->setFilename(resourceDirectory + "/water.png");
@@ -593,15 +526,12 @@ public:
   		texture5->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture5->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
 		texture6 = make_shared<Texture>();
   		texture6->setFilename(resourceDirectory + "/storageunit.png");
   		texture6->init();
   		texture6->setUnit(0);
   		texture6->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture6->setFiltering(GL_NEAREST, GL_NEAREST);
-
-
 
 		texture7 = make_shared<Texture>();
   		texture7->setFilename(resourceDirectory + "/guardrail.png");
@@ -610,15 +540,12 @@ public:
   		texture7->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture7->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
 		texture8 = make_shared<Texture>();
   		texture8->setFilename(resourceDirectory + "/wood.png");
   		texture8->init();
   		texture8->setUnit(0);
   		texture8->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture8->setFiltering(GL_NEAREST, GL_NEAREST);
-
-
 
 		texture9 = make_shared<Texture>();
   		texture9->setFilename(resourceDirectory + "/metalfence.png");
@@ -634,14 +561,12 @@ public:
   		texture10->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture10->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
 		texture11 = make_shared<Texture>();
   		texture11->setFilename(resourceDirectory + "/tiledwall.png");
   		texture11->init();
   		texture11->setUnit(0);
   		texture11->setWrapModes(GL_REPEAT, GL_REPEAT);
         texture11->setFiltering(GL_NEAREST, GL_NEAREST);
-
 
 		texture12 = make_shared<Texture>();
   		texture12->setFilename(resourceDirectory + "/scaffolding.png");
@@ -650,17 +575,12 @@ public:
   		texture12->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture12->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
-
-
 		texture13 = make_shared<Texture>();
   		texture13->setFilename(resourceDirectory + "/industrial_misc.png");
   		texture13->init();
   		texture13->setUnit(0);
   		texture13->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture13->setFiltering(GL_NEAREST, GL_NEAREST);
-
-
 
 		texture14 = make_shared<Texture>();
   		texture14->setFilename(resourceDirectory + "/stair_building.png");
@@ -690,7 +610,6 @@ public:
   		texture17->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture17->setFiltering(GL_NEAREST, GL_NEAREST);
 
-
 		texture18 = make_shared<Texture>();
   		texture18->setFilename(resourceDirectory + "/hill.png");
   		texture18->init();
@@ -698,18 +617,28 @@ public:
   		texture18->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
         texture18->setFiltering(GL_NEAREST, GL_NEAREST);
 
+        texture19 = make_shared<Texture>();
+        texture19->setFilename(resourceDirectory + "/1slipo.png");
+        texture19->init();
+        texture19->setUnit(0);
+  		texture19->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+        texture19->setFiltering(GL_NEAREST, GL_NEAREST);
 	}
 
 	void initGeom(const std::string& resourceDirectory)
 	{
 
+        //we need to load the characters into the map datastructure for
+        //text dispaly
         Text::load_characters(characters);
 
+        //initialize the world bounding box
         worldBox.init();
+
+        //load in the mesh and make the shape(s)
  		vector<tinyobj::shape_t> TOshapesZ;
  		vector<tinyobj::material_t> objMaterialsZ;
  		string errStr;
-		//load in the mesh and make the shape(s)
  		bool rc = tinyobj::LoadObj(TOshapesZ, objMaterialsZ, errStr, (resourceDirectory + "/cube.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
@@ -762,6 +691,9 @@ public:
 		}
 
 
+
+        //we need to load in multi shapes/single shapes with the following commands so that
+        //they are packed with AABB/OBBS and have correct methods
         house = loadMultiShape("/multi_shape_house.obj", resourceDirectory);
         stair_building= loadMultiShape("/multi_shape_stair.obj", resourceDirectory);
         guardrail= loadMultiShape("/multi_shape_guardrail.obj", resourceDirectory);
@@ -772,8 +704,6 @@ public:
         crane = loadMultiShape("/multi_crane.obj", resourceDirectory);
         hill = loadMultiShape("/hill.obj", resourceDirectory);
         wire = loadMultiShape("/wire.obj", resourceDirectory);
-
-
         telephone_pole = loadMultiShape("/telephone_pole.obj", resourceDirectory);
 
         ground = loadSingleShape("/ground.obj", resourceDirectory);
@@ -782,11 +712,19 @@ public:
         cementwall = loadSingleShape("/cementwall.obj", resourceDirectory );
         metalfence = loadSingleShape("/metalfence.obj", resourceDirectory);
         walllong = loadSingleShape("/walllong.obj", resourceDirectory,true);
+        lipo = loadSingleShape("/1slipo.obj", resourceDirectory);
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
 	}
 
+    /*Parameters: 
+     * filepath: path to the obj you want to load
+     * resourceDirectory: the path to the location of the resources
+     * OBB_flag: flag to tell whether to use OBB or AABB
+     Output: 
+     * multiModel struct with correct shape and collision detection loaded
+    */
     multiModel loadMultiShape(const string &filepath, const string &resourceDirectory, bool OBB_flag=false){
         multiModel result;    
 
@@ -841,6 +779,14 @@ public:
         return result;
     }
 
+
+    /*Parameters: 
+     * filepath: path to the obj you want to load
+     * resourceDirectory: the path to the location of the resources
+     * OBB_flag: flag to tell whether to use OBB or AABB
+     Output: 
+     * singleModel struct with correct shape and collision detection loaded
+    */
     singleModel loadSingleShape(const string &filepath, const string &resourceDirectory, bool OBB_flag=false){
         singleModel result;
 
@@ -875,7 +821,8 @@ public:
         return result;
     }
 
-	//directly pass quad for the ground to the GPU
+
+    /*initlized cpu generated ground*/
 	void initGround() {
 
 		float g_groundSize = 600;
@@ -928,7 +875,7 @@ public:
       	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, GL_STATIC_DRAW);
       }
 
-      //code to draw the ground plane
+      /*code to draw the ground plane*/
      void drawGround(shared_ptr<Program> curS) {
      	curS->bind();
      	glBindVertexArray(GroundVertexArrayID);
@@ -959,33 +906,7 @@ public:
   		curS->unbind();
      }
 
-     //helper function to pass material data to the GPU
-	void SetMaterial(shared_ptr<Program> curS, int i) {
-
-    	switch (i) {
-    		case 0: //
-    			glUniform3f(curS->getUniform("MatAmb"), 0.096, 0.046, 0.095);
-    			glUniform3f(curS->getUniform("MatDif"), 0.96, 0.46, 0.95);
-    			glUniform3f(curS->getUniform("MatSpec"), 0.45, 0.23, 0.45);
-    			glUniform1f(curS->getUniform("MatShine"), 120.0);
-    		break;
-    		case 1: // 
-    			glUniform3f(curS->getUniform("MatAmb"), 0.063, 0.038, 0.1);
-    			glUniform3f(curS->getUniform("MatDif"), 0.63, 0.38, 1.0);
-    			glUniform3f(curS->getUniform("MatSpec"), 0.3, 0.2, 0.5);
-    			glUniform1f(curS->getUniform("MatShine"), 4.0);
-    		break;
-    		case 2: //
-    			glUniform3f(curS->getUniform("MatAmb"), 0.004, 0.05, 0.09);
-    			glUniform3f(curS->getUniform("MatDif"), 0.04, 0.5, 0.9);
-    			glUniform3f(curS->getUniform("MatSpec"), 0.02, 0.25, 0.45);
-    			glUniform1f(curS->getUniform("MatShine"), 27.9);
-    		break;
-  		}
-	}
-
-
-	/* helper function to set model trasnforms */
+	/* helper function to set model transforms */
   	void SetModel(vec3 trans, float rotY, float rotX, float sc, shared_ptr<Program> curS) {
   		mat4 Trans = glm::translate( glm::mat4(1.0f), trans);
   		mat4 RotX = glm::rotate( glm::mat4(1.0f), rotX, vec3(1, 0, 0));
@@ -995,11 +916,13 @@ public:
   		glUniformMatrix4fv(curS->getUniform("M"), 1, GL_FALSE, value_ptr(ctm));
   	}
 
+    /*sets the program passed model uniform to the MatrixStack passed*/
 	void setModel(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack>M) {
 		glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, value_ptr(M->topMatrix()));
    	}
 
 
+    /*resizes the model into -1 to 1 range and centers at the origin*/
     void resize_and_center(vec3 gMin, vec3 gMax, shared_ptr<MatrixStack> Model){
         float center_x = (gMax.x + gMin.x)/2;
         float center_y = (gMax.y + gMin.y)/2;
@@ -1011,6 +934,8 @@ public:
         Model->scale(vec3(scale, scale, scale));
     }
 
+
+    /*given a material sets the uniforms of the program to that corresponding material*/
     void set_material_uniforms(std::shared_ptr<Program> prog, const Material &mat){
         glUniform3fv(prog->getUniform("material.ambient"), 1, glm::value_ptr(mat.ambient));
         glUniform3fv(prog->getUniform("material.diffuse"), 1, glm::value_ptr(mat.diffuse));
@@ -1020,6 +945,7 @@ public:
 
 
 
+    /*function to render the scene, dt is delta time*/
 	void render(float dt) {
 		// Get current frame buffer size.
 		int width, height;
@@ -1047,7 +973,9 @@ public:
             updateUsingCameraPath(dt);
 
         }else{
-            drone.updatePosition(dt);
+            if(!debugCam){
+                drone.updatePosition(dt);
+            }
             drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
             drone.updateTrickState(dt);
         }
@@ -1260,8 +1188,6 @@ public:
         cellProg->bind();
 		glUniformMatrix4fv(cellProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(cellProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-		glUniform3f(cellProg->getUniform("lightPos"), 0+lightTrans, 20.0+lightTrans, 0+lightTrans);
-
         //cylinder1
         cellProg->unbind();
 
@@ -1738,20 +1664,6 @@ public:
             Model->popMatrix();
 
 
-            /*
-            //stair building 
-            Model->pushMatrix();
-                texture14->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(13, -4, 30));
-                Model->rotate(-PI/2, (vec3(0, 1, 0)));
-                Model->scale(vec3(7, 7, 7));
-                resize_and_center(stair_build->min, stair_build->max, Model);
-                setModel(texProg, Model);
-                stair_build->draw(texProg);
-            Model->popMatrix();
-            */
-
-
             Model->pushMatrix();
                 texture14->bind(texProg->getUniform("Texture0"));
                 Model->translate(vec3(13, -4, 30));
@@ -1858,17 +1770,19 @@ public:
                 hill.draw_and_collide(texProg, Model->topMatrix(), drone);
             Model->popMatrix();
 
+            Model->pushMatrix();
+                texture19->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(0, sTheta*.5, 0));
+                resize_and_center(lipo.shape->min, lipo.shape->max, Model);
+                setModel(texProg, Model);
+                lipo.draw_and_collide(texProg, Model->topMatrix(), drone);
 
+            Model->popMatrix();
         Model->popMatrix();
-
-
         
         texProg->unbind();
 
-
-
-
-
+        /*we need this to restrict drone to worldBox*/
         Physics::clampToWorld(worldBox, drone);
         
 
@@ -1889,6 +1803,7 @@ public:
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        /*all of the text*/
         textProg->bind();
         glUniform1i(textProg->getUniform("text"), 0);
         glUniformMatrix4fv(textProg->getUniform("P"), 1, GL_FALSE, value_ptr(P_ortho));
@@ -1915,8 +1830,6 @@ public:
         }
         textProg->unbind();
         glDisable(GL_BLEND);
-
-        
 		
 		//animation update example
 		sTheta = sin(glfwGetTime());
