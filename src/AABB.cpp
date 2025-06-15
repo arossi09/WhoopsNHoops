@@ -50,9 +50,11 @@ void AABB::transform(const glm::mat4& model){
     corners = getCorners();
 
 
+    /*
     glBindBuffer(GL_ARRAY_BUFFER, posBufID);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * 8, corners.data());
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    */
 }
 
 

@@ -1,6 +1,9 @@
 #include <iostream>
 
 #include "Lipo.h"
+#include "Drone.h"
+
+//need to make it so that timer resets lipo
 
 Lipo::Lipo(glm::vec3 pos, const std::string resourceDirectory){
 
@@ -19,16 +22,29 @@ Lipo::Lipo(glm::vec3 pos, const std::string resourceDirectory){
         shape->init();
     }
     //create AABB
-    auto lipo_AABB= std::make_shared<AABB>(shape->min, shape->max);
+    lipo_AABB = std::make_shared<AABB>(shape->min, shape->max);
 }
 
-void Lipo::draw(std::shared_ptr<Program> prog){
-    shape->draw(prog);
+//we need this to draw and transform the AABB
+void Lipo::draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model){
+    lipo_AABB->transform(Model->topMatrix());
+    if(render){
+        shape->draw(prog);
+    }
 }
 
-void Lipo::update(float dt){
-    //need to implement
+void Lipo::update(float dt, Drone &drone){
+    //charge drone battery;
+    drone.battery += 25.0f;
+    //disapear
+    render = false;
+    
+    //start timer
     return;
+}
+
+void Lipo::chargeBattery(Drone drone){
+    drone.battery = 100.0f;
 }
 
 std::shared_ptr<AABB> Lipo::getAABB(){

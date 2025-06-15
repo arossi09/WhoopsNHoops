@@ -7,8 +7,12 @@
 
 using namespace glm;
 
+#define DECAY_RATE .01
+#define THROTTLE_FACTOR .5
+
 //drone struct with attributes and update
 struct Drone {
+    float battery = 100.0f;
     float superRate = 0.61f;
     float rcRate    = 1.0f;
     float maxVelocity = 70.0f;
@@ -55,6 +59,9 @@ struct Drone {
 
     //calculate drone physics
     void updatePosition(float dt){
+        battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
+        battery = max(battery, 0.0f);
+
         previousPosition = position;
         vec3 up = orientation * vec3(0, 1, 0);
         vec3 thrust = up * (throttle * 60000.0f); //Max thrust in N

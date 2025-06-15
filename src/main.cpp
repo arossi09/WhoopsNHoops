@@ -97,9 +97,8 @@ public:
     shared_ptr<Texture> texture18;
     shared_ptr<Texture> texture19;
 
-    vector <shared_ptr<Shape>> shapes;
     map<char, Character> characters;
-
+    vector<shared_ptr<Entity>> entities;
     //example data that might be useful when trying to compute bounds on multi-shape
     vec3 gMin;
     vec3 gMax;
@@ -128,6 +127,7 @@ public:
     float eTheta = 0;
     float hTheta = 0;
     bool debugCam = false;
+    bool hud = true;
 
 
     vector<shared_ptr<AABB>> draw_boxes;
@@ -224,7 +224,7 @@ public:
     singleModel cementwall;
     singleModel metalfence;
     singleModel walllong;
-    std::shared_ptr<Lipo> lipo_test;
+    std::shared_ptr<Lipo> lipo;
 
     Drone drone;
 
@@ -252,7 +252,6 @@ public:
 		}
 
 		if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-		   
 
             drone.position += front * vec3(2);
 		}
@@ -267,11 +266,22 @@ public:
             goCamera = !goCamera;
 		}
 
+		if (key == GLFW_KEY_UP && action == GLFW_PRESS){
+            drone.throttle = 1;
+		}
 
+		if (key == GLFW_KEY_UP && action == GLFW_RELEASE){
+            drone.throttle = 0;
+		}
 
 		if (key == GLFW_KEY_Q && action == GLFW_PRESS){
             debugCam = !debugCam;
 		}
+
+		if (key == GLFW_KEY_H && action == GLFW_PRESS){
+            hud = !hud;
+		}
+
 		if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 		}
@@ -392,7 +402,9 @@ public:
 	void init(const std::string& resourceDirectory)
 	{
 
-        lipo_test = make_shared<Lipo>(vec3(0, 0, 0), resourceDirectory);
+        lipo = make_shared<Lipo>(vec3(0, 0, 0), resourceDirectory);
+        entities.push_back(lipo);
+
 		GLSL::checkVersion();
 
 		// Set background color.
@@ -945,6 +957,19 @@ public:
         glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
     }
 
+    //we need this to loop through and update entities
+    void update_entities(float dt){
+        AABB droneAABB = drone.getAABB();
+        for(int i = 0; i < entities.size(); i++){
+            if(entities[i] && entities[i]->getAABB()){
+                if(entities[i]->getAABB()->intersects(droneAABB)){
+                    entities[i]->update(dt, drone);
+                }
+            }else{
+                cout << "UPDATE::ENTITIES: AABB is NULL!" << endl;
+            }
+        }
+    }
 
 
     /*function to render the scene, dt is delta time*/
@@ -967,6 +992,7 @@ public:
 		auto View = make_shared<MatrixStack>();
 		auto Model = make_shared<MatrixStack>();
 
+        //update Drone sates
         float yawVel   = get_rate(drone.yawInput,   drone.rcRate, drone.superRate);
         float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
         float rollVel  = get_rate(drone.rollInput,  drone.rcRate, drone.superRate);
@@ -982,6 +1008,8 @@ public:
             drone.updateTrickState(dt);
         }
 
+        update_entities(dt);
+
 		// Apply perspective projection.
 		Projection->pushMatrix();
 		Projection->perspective(45.3f, aspect, 0.01f, 800.0f);
@@ -994,7 +1022,6 @@ public:
        
         glm::mat4 P_ortho= glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
 
-        //offload this to function
 
         //draw skybox
         texProg->bind();
@@ -1200,6 +1227,9 @@ public:
 		glUniform3f(texProg->getUniform("lightDirection"), 1, -1, 1); 
 		glUniform1i(texProg->getUniform("flip"), 1); 
 		glUniform1i(texProg->getUniform("lightToggle"), 1); 
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         Model->pushMatrix();
             Model->translate(vec3(0, 2, 0));
@@ -1775,10 +1805,10 @@ public:
             //lipo
             Model->pushMatrix();
                 texture19->bind(texProg->getUniform("Texture0"));
-                Model->translate(vec3(0, sTheta*.5, 0));
-                resize_and_center(lipo_test->shape->min, lipo_test->shape->max, Model);
+                Model->translate(vec3(0, sTheta*.5, 5));
+                resize_and_center(lipo->shape->min, lipo->shape->max, Model);
                 setModel(texProg, Model);
-                lipo_test->draw(texProg);
+                lipo->draw(texProg, Model);
             Model->popMatrix();
 
         Model->popMatrix();
@@ -1803,30 +1833,33 @@ public:
 		texProg->unbind();
 
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         /*all of the text*/
         textProg->bind();
         glUniform1i(textProg->getUniform("text"), 0);
         glUniformMatrix4fv(textProg->getUniform("P"), 1, GL_FALSE, value_ptr(P_ortho));
+
+        if(debugCam){
+            Text::RenderText(textProg, "debug cam", 650, 550, .5, glm::vec3(1, 1, 1), characters);
+        }
         if(goCamera){
+            //main menu
             Text::RenderText(textProg, "WHOOPS AND HOOPS", 100, 500, .1*sTheta+1, glm::vec3(1, 1, 1), characters);
             Text::RenderText(textProg, "Press G to start", 250, 100, .7, glm::vec3(0, 1, 0), characters);
-            if(!gamepad_connected){
-                Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 225, 50, .7, glm::vec3(1, 0, 0), characters);
-            }
-        }else if (!goCamera && gamepad_connected){
+        }else if (!goCamera && hud){
+            //main hud
             int speed = static_cast<int>(length(drone.velocity));
             Text::RenderText(textProg, string( "SPEED: " + to_string(speed)), 25.0f, 25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
             Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
+            Text::RenderText(textProg, to_string(static_cast<int>(drone.battery)), 25.0f, 125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
             Text::RenderText(textProg, "SCORE:", 25.0f, 550.0f, .75f, glm::vec3(1, 1, 1), characters);
             Text::RenderText(textProg, to_string(drone.score), 40.0f, 500.0f, 1, glm::vec3(1, 1, 0), characters);
 
             Text::RenderText(textProg, drone.trick, 250.0f, 50.0f, .5f, glm::vec3(1, 1, 0), characters);
-            //Text::RenderText(textProg, drone.trick , 25.0f, 125.0f, 1, glm::vec3(0.5, 0.8f, 0.2f), characters);
-        }else if(!goCamera && !gamepad_connected){
+        }
+        if(!gamepad_connected){
+            //gamepad disconnnected
             if(!gamepad_connected){
                 Text::RenderText(textProg, "NO GAMEPAD DETECTED!", 225, 50, .7, glm::vec3(1, 0, 0), characters);
             }

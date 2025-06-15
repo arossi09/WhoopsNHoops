@@ -18,7 +18,7 @@ void main() {
         if(dC > .5){
             Outcolor = texColor0;
         }else{
-            Outcolor = texColor0 * .5f;
+            Outcolor = vec4(texColor0.rgb * .5f, texColor0.a);
         }
     }else{
         Outcolor = texColor0;
