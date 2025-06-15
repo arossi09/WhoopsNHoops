@@ -61,6 +61,9 @@ struct Drone {
     void updatePosition(float dt){
         battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
         battery = max(battery, 0.0f);
+        if(battery> 100.0f ){
+            battery = 100.0f;
+        }
 
         previousPosition = position;
         vec3 up = orientation * vec3(0, 1, 0);

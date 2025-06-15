@@ -16,7 +16,7 @@ void main() {
   	//to set the out color as the texture color 
     if(lightToggle == 1){
         if(dC > .5){
-            Outcolor = texColor0;
+            Outcolor = vec4(texColor0.rgb*.8f, texColor0.a);
         }else{
             Outcolor = vec4(texColor0.rgb * .5f, texColor0.a);
         }

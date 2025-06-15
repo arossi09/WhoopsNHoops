@@ -13,6 +13,7 @@ class AABB{
         glm::vec3 max;
         glm::vec3 originalMin;
         glm::vec3 originalMax;
+        bool collide = true;
 
 
 
@@ -41,8 +42,11 @@ class AABB{
 
         OBB toOBB() const;
 
-
         void init();
+
+        bool getCollide();
+
+        void setCollide(bool c);
 
     private:
        unsigned int vaoID = 0; 

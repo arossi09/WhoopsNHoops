@@ -1244,8 +1244,6 @@ public:
                 Model->rotate(PI/2.7, vec3(1, 0, 0));//rotate on side
                 Model->rotate(PI/2, vec3(0, 0, 1));//flip over
                 Model->scale(vec3(1.2f,1.2f,1.2f));
-
-                //Model->scale(vec3(1, ));
                 resize_and_center(cylinder1.gMin, cylinder1.gMax, Model);
                 setModel(texProg, Model);
                 cylinder1.draw_and_collide(texProg, Model->topMatrix(), drone);
@@ -1766,6 +1764,16 @@ public:
                 texture16->bind(texProg->getUniform("Texture0"));
                 Model->translate(vec3(-80, 28, -80));
                 Model->scale(vec3(20, 20, 20));
+                resize_and_center(skyscraper->min, skyscraper->max, Model);
+                setModel(texProg, Model);
+                skyscraper->draw(texProg);
+            Model->popMatrix();
+
+            Model->pushMatrix();
+                texture16->bind(texProg->getUniform("Texture0"));
+                Model->translate(vec3(-105, 24, -65));
+                Model->rotate(PI/3.5,vec3(0, 1, 0));
+                Model->scale(vec3(16, 16, 16));
                 resize_and_center(skyscraper->min, skyscraper->max, Model);
                 setModel(texProg, Model);
                 skyscraper->draw(texProg);

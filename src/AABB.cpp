@@ -29,7 +29,7 @@ glm::vec3 AABB::getSize() const{
 bool AABB::intersects(const AABB& other) const {
     return (min.x <= other.max.x && max.x >= other.min.x) &&
         (min.y <= other.max.y && max.y >= other.min.y) &&
-        (min.z <= other.max.z && max.z >= other.min.z);
+        (min.z <= other.max.z && max.z >= other.min.z) && collide;
 }
 
 void AABB::transform(const glm::mat4& model){
@@ -163,4 +163,12 @@ void AABB::draw(const std::shared_ptr<Program> prog){
 
     GLSL::disableVertexAttribArray(h_pos);
     glBindVertexArray(0);
+}
+
+bool AABB::getCollide(){
+    return collide;
+}
+
+void AABB::setCollide(bool c){
+   collide = c; 
 }

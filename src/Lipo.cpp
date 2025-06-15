@@ -38,6 +38,8 @@ void Lipo::update(float dt, Drone &drone){
     drone.battery += 25.0f;
     //disapear
     render = false;
+
+    lipo_AABB->setCollide(false);
     
     //start timer
     return;
