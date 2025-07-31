@@ -15,7 +15,7 @@ struct Drone {
     float battery = 100.0f;
     float superRate = 0.61f;
     float rcRate    = 1.0f;
-    float maxVelocity = 70.0f;
+    float maxVelocity = 100.0f;
     vec3 position = vec3(0.0f, 1.0f, 0.0f); 
     vec3 previousPosition = vec3(0.0f);
     quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -59,11 +59,13 @@ struct Drone {
 
     //calculate drone physics
     void updatePosition(float dt){
+        /*
         battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
         battery = max(battery, 0.0f);
         if(battery> 100.0f ){
             battery = 100.0f;
         }
+        */
 
         previousPosition = position;
         vec3 up = orientation * vec3(0, 1, 0);

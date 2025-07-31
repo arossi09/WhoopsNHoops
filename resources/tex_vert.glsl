@@ -13,8 +13,8 @@ out vec2 vTexCoord;
 
 void main() {
 
-
   gl_Position = P * V *M * vec4(vertPos.xyz, 1.0);
+
 
 
 

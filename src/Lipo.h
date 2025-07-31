@@ -15,10 +15,13 @@ class Lipo : public Entity {
 
         Lipo(glm::vec3 pos, const std::string resourceDirectory);
         void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model) override;
+        void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model,
+            std::shared_ptr<MatrixStack> View, std::shared_ptr<MatrixStack> Project);
         void update(float dt, Drone &drone) override;
         std::shared_ptr<AABB> getAABB() override;
         //need to add function to call once i detect collision that takes
         //and alters drone state
     private:
+        std::shared_ptr<Program> shadowProg;
         void chargeBattery(Drone drone);
 };

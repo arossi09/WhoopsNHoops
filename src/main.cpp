@@ -1,8 +1,3 @@
-/*
- * CSC 471 Cal Poly Z. Wood + S. Sueda + I. Dunn
- */
-
-
 
 //TODO
 //finish scene
@@ -12,7 +7,7 @@
 //TODO 
 //Make it so static aabbs/obbs are not remade every frame
 //add collectable lipos
-//I could pass  the bboxProg to draw_and_collid eto also draw the bbox
+//
 //
 #include <iostream>
 #include <glad/glad.h>
@@ -1811,13 +1806,16 @@ public:
             Model->popMatrix();
 
             //lipo
+            /*
             Model->pushMatrix();
                 texture19->bind(texProg->getUniform("Texture0"));
                 Model->translate(vec3(0, sTheta*.5, 5));
+                Model->rotate(glfwGetTime(), vec3(0, 1, 0));
                 resize_and_center(lipo->shape->min, lipo->shape->max, Model);
                 setModel(texProg, Model);
-                lipo->draw(texProg, Model);
+                lipo->draw(texProg, Model, View, Projection);
             Model->popMatrix();
+            */
 
         Model->popMatrix();
         
@@ -1859,7 +1857,7 @@ public:
             int speed = static_cast<int>(length(drone.velocity));
             Text::RenderText(textProg, string( "SPEED: " + to_string(speed)), 25.0f, 25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
             Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
-            Text::RenderText(textProg, to_string(static_cast<int>(drone.battery)), 25.0f, 125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
+            //Text::RenderText(textProg, to_string(static_cast<int>(drone.battery)), 25.0f, 125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
             Text::RenderText(textProg, "SCORE:", 25.0f, 550.0f, .75f, glm::vec3(1, 1, 1), characters);
             Text::RenderText(textProg, to_string(drone.score), 40.0f, 500.0f, 1, glm::vec3(1, 1, 0), characters);
