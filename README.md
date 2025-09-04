@@ -26,3 +26,5 @@ cmake ..
 make
 ./WhoopsnHoops
 
+
+Check out development/other info here --->  <https://arossi09.github.io/whoopsnhoops.html> (:
