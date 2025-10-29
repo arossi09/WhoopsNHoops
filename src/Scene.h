@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "Program.h"
 #include "ResourceManager.h"
+#include "PhysicsWorld.h"
 #include "Shape.h"
 #include "Texture.h"
 #include <glad/glad.h>
@@ -20,35 +21,31 @@ class Shape;
 class Texture;
 class AABB;
 
-class Scene {
+class SceneObject{
 public:
-  void load(const std::string &path, ResourceManager &rm);
-
-  void draw(std::shared_ptr<Program> prog, const glm::mat4 &viewProj);
-
-private:
-  // these are the scene objects that are needed to encapsulate
-  // all objects data and transforms
-  struct SceneObject {
     std::string name;
     std::shared_ptr<Mesh> mesh;
     std::shared_ptr<Texture> texture;
     glm::vec3 position;
     glm::vec3 rotation;
     glm::vec3 scale = glm::vec3(1.0f);
-    std::shared_ptr<AABB> aabb;
+    std::vector<std::shared_ptr<AABB>> colliders;
 
-    void draw(std::shared_ptr<Program> prog, const glm::mat4 &parent) {
-      glm::mat4 model = glm::translate(parent, position);
-      model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
-      model = glm::scale(model, scale);
-      glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
-                         glm::value_ptr(model));
-      for (auto &shape : mesh->shapes) {
-        shape->draw(prog);
-      }
-    }
-  };
+    void draw(std::shared_ptr<Program> prog, const glm::mat4 &parent);
+    void setupColliders();
+
+};
+
+class Scene {
+public:
+  void load(const std::string &path, ResourceManager &rm);
+	void setupPhysics(PhysicsWorld &world);
+  void draw(std::shared_ptr<Program> prog, const glm::mat4 &viewProj);
+
+private:
+
+
+  // this function is needed to setup the colliders positions
 
   std::vector<SceneObject> sceneObjects;
 };

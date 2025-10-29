@@ -21,6 +21,8 @@ namespace Physics{
         }
     }
 
+
+
     void resolveAABBCollision(const AABB &box, Drone &drone){
         AABB droneBox = drone.getAABB();
         vec3 delta = droneBox.getCenter() - box.getCenter();

@@ -1,3 +1,4 @@
+
 #include "ResourceManager.h"
 #include "Shape.h"
 #include "Texture.h"
@@ -7,6 +8,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
 
+// this function is needed to load obj into mesh object from a
+//.obj file path
 std::shared_ptr<Mesh> ResourceManager::getMesh(const std::string &name,
                                                const std::string &path) {
 
@@ -25,6 +28,8 @@ std::shared_ptr<Mesh> ResourceManager::getMesh(const std::string &name,
   if (!rc)
     std::cerr << err << std::endl;
 
+  // this is for looping through shapes and adding each one to
+  // mesh shape list as well as calculating entire boudning box
   for (auto &toShape : shapes) {
     auto shape = std::make_shared<Shape>();
     shape->createShape(toShape);
@@ -47,6 +52,8 @@ std::shared_ptr<Mesh> ResourceManager::getMesh(const std::string &name,
   meshCache[name] = mesh;
   return mesh;
 }
+
+// this function is needed to laod textures from given filepath
 std::shared_ptr<Texture> ResourceManager::getTexture(const std::string &name,
                                                      const std::string &path) {
   if (textureCache.count(name))
