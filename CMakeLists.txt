@@ -20,7 +20,6 @@ file(GLOB_RECURSE GLSL "resources/*.glsl")
 find_package(Freetype REQUIRED)
 # Include directories (only system ones)
 
-
 include_directories(${FREETYPE_INCLUDE_DIRS})
 include_directories("ext")
 include_directories("ext/glad/include")

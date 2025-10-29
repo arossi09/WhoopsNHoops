@@ -1,0 +1,13 @@
+{
+	"objects": [
+		{
+			"name": "pallet",
+			"model": "pallet.obj",
+			"texture": "wood.png",
+			"position": [0, 0, 0],
+			"rotation": [0, 0, 0],
+			"scale": [2, 2, 2]
+		}
+
+	]
+}

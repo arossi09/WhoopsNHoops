@@ -101,6 +101,7 @@ void WindowManager::key_callback(GLFWwindow * window, int key, int scancode, int
 	}
 }
 
+
 void WindowManager::mouse_callback(GLFWwindow * window, int button, int action, int mods)
 {
 	if (instance && instance->callbacks)
