@@ -25,7 +25,7 @@ void Scene::load(const std::string &path, ResourceManager &rm) {
     std::string modelFile = obj.value("model", "");
     std::string textureFile = obj.value("texture", "");
 
-    sceneObj.shape = rm.getShape(sceneObj.name, "../resources/" + modelFile);
+    sceneObj.mesh = rm.getMesh(sceneObj.name, "../resources/" + modelFile);
     sceneObj.texture =
         rm.getTexture(sceneObj.name, "../resources/" + textureFile);
 

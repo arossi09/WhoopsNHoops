@@ -1,13 +1,14 @@
 #ifndef SCENE_H
 #define SCENE_H
 
+#include "Mesh.h"
+#include "Program.h"
+#include "ResourceManager.h"
+#include "Shape.h"
+#include "Texture.h"
 #include <glad/glad.h>
 #include <iostream>
 #include <memory>
-#include "Program.h"
-#include "Shape.h"
-#include "ResourceManager.h"
-#include "Texture.h"
 
 #include <glm/gtc/type_ptr.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -30,7 +31,7 @@ private:
   // all objects data and transforms
   struct SceneObject {
     std::string name;
-    std::shared_ptr<shape> shapes;
+    std::shared_ptr<Mesh> mesh;
     std::shared_ptr<Texture> texture;
     glm::vec3 position;
     glm::vec3 rotation;
@@ -43,7 +44,9 @@ private:
       model = glm::scale(model, scale);
       glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
                          glm::value_ptr(model));
-      shape->draw(prog);
+      for (auto &shape : mesh->shapes) {
+        shape->draw(prog);
+      }
     }
   };
 

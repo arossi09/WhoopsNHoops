@@ -7,6 +7,14 @@
 			"position": [0, 0, 0],
 			"rotation": [0, 0, 0],
 			"scale": [2, 2, 2]
+		},
+		{
+			"name": "house",
+			"model": "multi_shape_house.obj",
+			"texture": "house.png",
+			"position": [0, 0, 0],
+			"rotation": [0, 0, 0],
+			"scale": [2, 2, 2]
 		}
 
 	]
