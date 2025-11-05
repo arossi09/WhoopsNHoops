@@ -1,4 +1,4 @@
-//TODO fix in scene wher colliders are hard coded move by parent offset
+// TODO fix in scene wher colliders are hard coded move by parent offset
 #include <chrono>
 #include <glad/glad.h>
 #include <iostream>
@@ -65,30 +65,9 @@ public:
   GLuint GroundVertexArrayID;
 
   // the image to use as a texture (ground)
-  shared_ptr<Texture> texture0;
   shared_ptr<Texture> texture1;
-  shared_ptr<Texture> texture2;
-  shared_ptr<Texture> texture3;
-  shared_ptr<Texture> texture4;
   shared_ptr<Texture> texture5;
-  shared_ptr<Texture> texture6;
-  shared_ptr<Texture> texture7;
-  shared_ptr<Texture> texture8;
-  shared_ptr<Texture> texture9;
-  shared_ptr<Texture> texture10;
-  shared_ptr<Texture> texture11;
-  shared_ptr<Texture> texture12;
-  shared_ptr<Texture> texture13;
-  shared_ptr<Texture> texture14;
-  shared_ptr<Texture> texture15;
-  shared_ptr<Texture> texture16;
-  shared_ptr<Texture> texture17;
-  shared_ptr<Texture> texture18;
-  shared_ptr<Texture> texture19;
-
   map<char, Character> characters;
-  vector<shared_ptr<Entity>> entities;
-
   float dt;
 
   // example data that might be useful when trying to compute bounds on
@@ -128,91 +107,6 @@ public:
   Spline splinepath[3];
   int currentSpline = 0;
   int numSplines = 3;
-
-  struct Material {
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-    float shininess;
-  };
-
-  // scene class
-  struct multiModel {
-    vector<shared_ptr<Shape>> shapes;
-    vector<shared_ptr<AABB>> AABB_boxes;
-    vector<shared_ptr<OBB>> OBB_boxes;
-    int isStatic;
-    vec3 gMin;
-    vec3 gMax;
-
-    // implement cache
-
-    // we need this to be able to loop through the boxes and shapes drawing
-    // each model along with transforming the boxes and creating copies for
-    // each box so that the previous ones arent overwritten
-    void draw_and_collide(shared_ptr<Program> prog, mat4 Model, Drone &drone) {
-      if (shapes.size() == AABB_boxes.size() ||
-          shapes.size() == OBB_boxes.size()) {
-        for (int i = 0; i < shapes.size(); i++) {
-          shapes[i]->draw(prog);
-
-          if (OBB_boxes.size() > 0) {
-            OBB transformedBox = OBB_boxes[i]->transformed(mat4(1));
-            Physics::handleCollision(transformedBox, drone, Model);
-          } else {
-            AABB transformedBox = AABB_boxes[i]->transformed(Model);
-            Physics::handleCollision(transformedBox, drone);
-          }
-        }
-      }
-    }
-  };
-
-  // copy the instances
-  struct singleModel {
-    shared_ptr<Shape> shape;
-    shared_ptr<AABB> AABB_box;
-    shared_ptr<OBB> OBB_box;
-    int isstatic;
-    vec3 gMin;
-    vec3 gMax;
-
-    // we need this to be able to loop through the boxes and shapes drawing
-    // each model along with transforming the boxes and creating copies for
-    // each box so that the previous ones arent overwritten
-    void draw_and_collide(shared_ptr<Program> prog, mat4 Model, Drone &drone) {
-      shape->draw(prog);
-      // create a copy of box and push to enable multiple of the same
-      // AABB
-
-      if (AABB_box) {
-        AABB transformedBox = AABB_box->transformed(Model);
-        Physics::handleCollision(transformedBox, drone);
-      } else {
-        OBB transformedbox = OBB_box->transformed(mat4(1));
-        Physics::handleCollision(transformedbox, drone, Model);
-      }
-    }
-  };
-
-  multiModel stair_building;
-  multiModel guardrail;
-  multiModel house;
-  multiModel scaffolding;
-  multiModel storageunit;
-  multiModel cylinder1;
-  multiModel crate;
-  multiModel crane;
-  multiModel hill;
-  multiModel telephone_pole;
-  multiModel wire;
-  singleModel ground;
-  singleModel pallet;
-  singleModel tiledwall;
-  singleModel cementwall;
-  singleModel metalfence;
-  singleModel walllong;
-  std::shared_ptr<Lipo> lipo;
 
   Drone drone;
 
@@ -270,10 +164,12 @@ public:
     if (debugCam) {
       phi -= deltaY * sensitivity;
       theta += deltaX * sensitivity;
-      if (phi > 80)
-        phi = 80;
-      if (phi < -80)
-        phi = -80;
+      /*
+if (phi > 80)
+phi = 80;
+if (phi < -80)
+phi = -80;
+              */
       drone.updateMouseOrientation(phi, theta, .005);
     }
   }
@@ -368,9 +264,6 @@ public:
   }
 
   void init(const std::string &resourceDirectory) {
-
-    lipo = make_shared<Lipo>(vec3(0, 0, 0), resourceDirectory);
-    entities.push_back(lipo);
 
     GLSL::checkVersion();
 
@@ -527,140 +420,8 @@ public:
       skyscraper->init();
     }
 
-    // we need to load in multi shapes/single shapes with the following commands
-    // so that they are packed with AABB/OBBS and have correct methods
-    house = loadMultiShape("/multi_shape_house.obj", resourceDirectory);
-    stair_building =
-        loadMultiShape("/multi_shape_stair.obj", resourceDirectory);
-    guardrail = loadMultiShape("/multi_shape_guardrail.obj", resourceDirectory);
-    scaffolding =
-        loadMultiShape("/scaffolding_multi_shape.obj", resourceDirectory);
-    storageunit =
-        loadMultiShape("/multi_shape_storageunit.obj", resourceDirectory);
-    crate = loadMultiShape("/storagecrate.obj", resourceDirectory, true);
-    cylinder1 =
-        loadMultiShape("/multi_shape_cylinder.obj", resourceDirectory, true);
-    crane = loadMultiShape("/multi_crane.obj", resourceDirectory);
-    hill = loadMultiShape("/hill.obj", resourceDirectory);
-    wire = loadMultiShape("/wire.obj", resourceDirectory);
-    telephone_pole = loadMultiShape("/telephone_pole.obj", resourceDirectory);
-
-    ground = loadSingleShape("/ground.obj", resourceDirectory);
-    tiledwall = loadSingleShape("/tiledwall.obj", resourceDirectory);
-    pallet = loadSingleShape("/pallet.obj", resourceDirectory, true);
-    cementwall = loadSingleShape("/cementwall.obj", resourceDirectory);
-    metalfence = loadSingleShape("/metalfence.obj", resourceDirectory);
-    walllong = loadSingleShape("/walllong.obj", resourceDirectory, true);
-
     // code to load in the ground plane (CPU defined data passed to GPU)
     initGround();
-  }
-
-  /*Parameters:
-   * filepath: path to the obj you want to load
-   * resourceDirectory: the path to the location of the resources
-   * OBB_flag: flag to tell whether to use OBB or AABB
-   Output:
-   * multiModel struct with correct shape and collision detection loaded
-  */
-  multiModel loadMultiShape(const string &filepath,
-                            const string &resourceDirectory,
-                            bool OBB_flag = false) {
-    multiModel result;
-
-    vector<tinyobj::shape_t> TOshapes;
-    vector<tinyobj::material_t> objMaterials;
-    string errStr;
-
-    vec3 minBounds = vec3(numeric_limits<float>::max());
-    vec3 maxBounds = vec3(-numeric_limits<float>::max());
-    bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr,
-                               (resourceDirectory + filepath).c_str());
-
-    if (!rc) {
-      cerr << errStr << endl;
-    } else {
-      for (int i = 0; i < TOshapes.size(); i++) {
-        auto shape = make_shared<Shape>();
-        shape->createShape(TOshapes[i]);
-        shape->measure();
-        shape->init();
-        result.shapes.push_back(shape);
-        if (OBB_flag) {
-          vec3 center = (shape->min + shape->max) * 0.5f;
-          vec3 halfWidths = (shape->max - shape->min) * 0.5f;
-          mat3 orientation = mat3(1.0f);
-          auto box = make_shared<OBB>(center, halfWidths, orientation);
-          // box->initAxes();
-          result.OBB_boxes.push_back(box);
-
-        } else {
-          auto box = make_shared<AABB>(shape->min, shape->max);
-          // box->init();
-          result.AABB_boxes.push_back(box);
-        }
-
-        // right now automatically adds to collision detection
-        // might want to not automatically and have this on
-        // draw
-
-        minBounds.x = std::min(minBounds.x, shape->min.x);
-        minBounds.y = std::min(minBounds.y, shape->min.y);
-        minBounds.z = std::min(minBounds.z, shape->min.z);
-
-        maxBounds.x = std::max(maxBounds.x, shape->max.x);
-        maxBounds.y = std::max(maxBounds.y, shape->max.y);
-        maxBounds.z = std::max(maxBounds.z, shape->max.z);
-      }
-    }
-
-    result.gMin = minBounds;
-    result.gMax = maxBounds;
-    return result;
-  }
-
-  /*Parameters:
-   * filepath: path to the obj you want to load
-   * resourceDirectory: the path to the location of the resources
-   * OBB_flag: flag to tell whether to use OBB or AABB
-   Output:
-   * singleModel struct with correct shape and collision detection loaded
-  */
-  singleModel loadSingleShape(const string &filepath,
-                              const string &resourceDirectory,
-                              bool OBB_flag = false) {
-    singleModel result;
-
-    string errStr;
-    vector<tinyobj::shape_t> TOshapes;
-    vector<tinyobj::material_t> objMaterials;
-    // load in the mesh and make the shape(s)
-    bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr,
-                               (resourceDirectory + filepath).c_str());
-    if (!rc) {
-      cerr << errStr << endl;
-    } else {
-      auto shape = make_shared<Shape>();
-      shape->createShape(TOshapes[0]);
-      shape->measure();
-      shape->init();
-      if (OBB_flag) {
-        vec3 center = (shape->min + shape->max) * 0.5f;
-        vec3 halfWidths = (shape->max - shape->min) * 0.5f;
-        mat3 orientation = mat3(1.0f);
-
-        auto box = make_shared<OBB>(center, halfWidths, orientation);
-        // box->initAxes();
-        result.OBB_box = box;
-
-      } else {
-        auto box = make_shared<AABB>(shape->min, shape->max);
-        // box->init();
-        result.AABB_box = box;
-      }
-      result.shape = shape;
-    }
-    return result;
   }
 
   /*initlized cpu generated ground*/
@@ -765,32 +526,20 @@ public:
     Model->scale(vec3(scale, scale, scale));
   }
 
-  /*given a material sets the uniforms of the program to that corresponding
-   * material*/
-  void set_material_uniforms(std::shared_ptr<Program> prog,
-                             const Material &mat) {
-    glUniform3fv(prog->getUniform("material.ambient"), 1,
-                 glm::value_ptr(mat.ambient));
-    glUniform3fv(prog->getUniform("material.diffuse"), 1,
-                 glm::value_ptr(mat.diffuse));
-    glUniform3fv(prog->getUniform("material.specular"), 1,
-                 glm::value_ptr(mat.specular));
-    glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
-  }
-
-  // we need this to loop through and update entities
-  void update_entities(float dt) {
-    AABB droneAABB = drone.getAABB();
-    for (int i = 0; i < entities.size(); i++) {
-      if (entities[i] && entities[i]->getAABB()) {
-        if (entities[i]->getAABB()->intersects(droneAABB)) {
-          entities[i]->update(dt, drone);
-        }
-      } else {
-        cout << "UPDATE::ENTITIES: AABB is NULL!" << endl;
-      }
-    }
-  }
+  /*
+given a material sets the uniforms of the program to that corresponding
+* material
+void set_material_uniforms(std::shared_ptr<Program> prog,
+                       const Material &mat) {
+glUniform3fv(prog->getUniform("material.ambient"), 1,
+           glm::value_ptr(mat.ambient));
+glUniform3fv(prog->getUniform("material.diffuse"), 1,
+           glm::value_ptr(mat.diffuse));
+glUniform3fv(prog->getUniform("material.specular"), 1,
+           glm::value_ptr(mat.specular));
+glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
+}
+  */
 
   /*function to render the scene, dt is delta time*/
   void render() {
@@ -827,16 +576,12 @@ public:
       drone.updateTrickState(dt);
     }
 
-    update_entities(dt);
-
     // Apply perspective projection.
     Projection->pushMatrix();
     Projection->perspective(45.3f, aspect, 0.01f, 800.0f);
-
     // View is global translation along negative z for now
     View->pushMatrix();
     View->loadIdentity();
-
     updateCamera(View, drone.position, drone.orientation,
                  drone.camera_title_angle);
 
@@ -1057,9 +802,9 @@ public:
     Model->translate(vec3(0, 2, 0));
     Model->scale(vec3(4, 4, 4));
 
-		//draw the scene
+    // draw the scene
     scene.draw(texProg, Model->topMatrix());
-		//handle the drone collisions among all colliders
+    // handle the drone collisions among all colliders
     physicsWorld.handleDroneCollisions(drone);
 
     Model->popMatrix();
@@ -1110,14 +855,17 @@ public:
       // Text::RenderText(textProg,
       // to_string(static_cast<int>(drone.battery)), 25.0f, 125.0f, .75f,
       // glm::vec3(0.5, 0.8f, 0.2f), characters);
+			//
 
-      Text::RenderText(textProg, "SCORE:", 25.0f, 550.0f, .75f,
+      Text::RenderText(textProg, to_string(drone.score), 370.0f, 70.0f, .8f,
                        glm::vec3(1, 1, 1), characters);
-      Text::RenderText(textProg, to_string(drone.score), 40.0f, 500.0f, 1,
-                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, to_string(drone.score), 365.0f, 65.0f, .8f,
+                       glm::vec3(0, 0, 0), characters);
 
-      Text::RenderText(textProg, drone.trick, 250.0f, 50.0f, .5f,
-                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, drone.trick, 380, 50.0f, .5f,
+                       glm::vec3(1, 1, 0), characters, 500, true);
+      Text::RenderText(textProg, drone.trick, 378, 45.0f, .5f,
+                       glm::vec3(0, 0, 0), characters, 500, true);
     }
     if (!gamepad_connected) {
       // gamepad disconnnected

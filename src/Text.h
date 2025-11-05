@@ -15,7 +15,10 @@ struct Character {
 namespace Text {
     extern unsigned int VAO, VBO, atlasTextureID;
     void load_characters(std::map<char, Character>& Characters);
-    void RenderText(std::shared_ptr<Program> prog, std::string text, float x,
-            float y, float scale, glm::vec3 color, const std::map<char, Character> &Characters);
+
+		void RenderText(std::shared_ptr<Program> prog, std::string text, float x,
+                      float y, float scale, glm::vec3 color,
+                      const std::map<char, Character> &Characters,
+                      float maxWidth = 0.0f, bool center = false);
 
 }

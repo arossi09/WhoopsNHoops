@@ -8,6 +8,8 @@ using json = nlohmann::json;
 void SceneObject::draw(std::shared_ptr<Program> prog, const glm::mat4 &parent) {
   glm::mat4 model = glm::translate(parent, position);
   model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+  model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
+  model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
   model = glm::scale(model, scale);
 
   float center_x = (mesh->gMax.x + mesh->gMin.x) / 2;
@@ -39,6 +41,8 @@ void SceneObject::setupColliders() {
 
   model = glm::translate(model, position);
   model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+  model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
+  model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
   model = glm::scale(model, scale);
 
 	//for resize and centering
@@ -62,7 +66,6 @@ void SceneObject::setupColliders() {
 
 // this function is used to load in scene from .json file
 void Scene::load(const std::string &path, ResourceManager &rm) {
-
   std::ifstream file(path);
   if (!file.is_open()) {
     std::cerr << "Failed to open scene file: " << path << std::endl;

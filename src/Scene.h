@@ -44,9 +44,7 @@ public:
 
 private:
 
-
   // this function is needed to setup the colliders positions
-
   std::vector<SceneObject> sceneObjects;
 };
 #endif

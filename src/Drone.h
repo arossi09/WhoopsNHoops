@@ -1,239 +1,372 @@
 #ifndef DRONE_H
 #define DRONE_H
 
-#include <string>
-#include <glm/glm.hpp>
 #include "AABB.h"
+#include <glm/glm.hpp>
+#include <iostream>
+#include <string>
 
 using namespace glm;
 
 #define DECAY_RATE .01
 #define THROTTLE_FACTOR .5
 
-//drone struct with attributes and update
+enum drone_states { INVERTED, NONE, COMPLETE, TIMER_START };
+
+template <typename T>
+std::string join(const std::vector<T> &arr, const std::string &delimiter) {
+  std::string result = "";
+  if (!arr.empty()) {
+    result += arr[0];
+    for (size_t i = 1; i < arr.size(); i++) {
+      result += delimiter;
+      result += arr[i];
+    }
+  }
+  return result;
+}
+
+struct Fsm {
+  enum drone_states state;
+  enum drone_states previous_state;
+};
+
+// drone struct with attributes and update
 struct Drone {
-    float battery = 100.0f;
-    float superRate = 0.61f;
-    float rcRate    = 1.0f;
-    float maxVelocity = 100.0f;
-    vec3 position = vec3(0.0f, 1.0f, 0.0f); 
-    vec3 previousPosition = vec3(0.0f);
-    quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
-    quat prevorientation = quat(1.0, 0.0f, 0.0f, 0.0f);
-    vec3 velocity = vec3(0.0f);
-    vec3 acceleration = vec3(0.0f);
-    float mass = 250.0f;
-    float camera_title_angle = 25;
+  Fsm splitS_state;
+  Fsm roll_state;
+  float battery = 100.0f;
+  float superRate = 0.61f;
+  float rcRate = 1.0f;
+  float maxVelocity = 100.0f;
+  vec3 position = vec3(0.0f, 1.0f, 0.0f);
+  vec3 previousPosition = vec3(0.0f);
+  quat orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
+  quat prevorientation = quat(1.0, 0.0f, 0.0f, 0.0f);
+  vec3 velocity = vec3(0.0f);
+  vec3 acceleration = vec3(0.0f);
+  float mass = 250.0f;
+  float camera_title_angle = 25;
 
-    std::string trick = "";
-    int string_count = 0;
-    int score = 0;
+  std::string trick = "";
+  int string_count = 0;
+  int score = 0;
 
-    //prob move this to another struct
-    float rollInput = 0.0f;
-    float pitchInput = 0.0f;
-    float yawInput = 0.0f;
-    float throttle = 0.0;
+  // prob move this to another struct
+  float rollInput = 0.0f;
+  float pitchInput = 0.0f;
+  float yawInput = 0.0f;
+  float throttle = 0.0;
 
+  // trick detector
+  std::vector<std::string> trick_array;
+  float rollAcum = 0.0f;
+  float pitchAcum = 0.0f;
+  float yawAcum = 0.0f;
+  float dPitch = 0.0f;
+  float dYaw = 0.0f;
+  float dRoll = 0.0f;
+  bool intrick = false;
+  bool diving = false;
+  bool diveTextAdded = false;
+  float timeSinceLastTrick = 0.0f;
+  float rollTimer = 0.0f;
+  float pitchTimer = 0.0f;
+  float splitSTimer = 0.0f;
+  float yawTimer = 0.0f;
+  float maxTricktime = 2;
+  float rollTriggerAcum = 0.0f;
+  float rollTriggerTimer = 0.0f;
 
-    //trick detector
-    float rollAcum = 0.0f;
-    float pitchAcum = 0.0f;
-    float yawAcum = 0.0f;
-    float dPitch = 0.0f;
-    float dYaw= 0.0f;
-    float dRoll= 0.0f;
-    bool intrick = false;
-    bool diving = false;
-    bool diveTextAdded = false;
-    float timeSinceLastTrick = 0.0f;
-    float rollTimer = 0.0f;
-    float pitchTimer = 0.0f;
-    float yawTimer = 0.0f;
-    float maxTricktime = 2;
+  AABB getAABB() const {
+    float halfSize = .7f;
+    return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
+  }
 
-    AABB getAABB() const {
-        float halfSize = .7f;  
-        return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
+  // calculate drone physics
+  void updatePosition(float dt) {
+    /*
+    battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
+    battery = max(battery, 0.0f);
+    if(battery> 100.0f ){
+        battery = 100.0f;
     }
+    */
 
-    //calculate drone physics
-    void updatePosition(float dt){
-        /*
-        battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
-        battery = max(battery, 0.0f);
-        if(battery> 100.0f ){
-            battery = 100.0f;
+    previousPosition = position;
+    vec3 up = orientation * vec3(0, 1, 0);
+    vec3 thrust = up * (throttle * 60000.0f); // Max thrust in N
+
+    // prob have to fix this by balancing mass and thrust instead
+    vec3 gravity = vec3(0, -95.0f, 0);
+    vec3 netForce = thrust + (gravity * mass);
+    acceleration = netForce / mass;
+
+    // calculate the position through acceleration & velocity
+    velocity += acceleration * dt;
+    velocity *= .99f;
+    position += velocity * dt;
+
+    if (length(velocity) > maxVelocity) {
+      velocity = normalize(velocity) * maxVelocity;
+    }
+  }
+
+  void updateTrickState(float dt) {
+    // we need to calculate the delta angles for pitch, yaw, and
+    // roll to see if we complete full rotations
+    glm::quat deltaQ = glm::inverse(prevorientation) * orientation;
+    glm::vec3 eulerDelta = glm::eulerAngles(deltaQ);
+
+    // these hold the delta values in case we are able to add it to total
+    // accum
+    dRoll = glm::degrees(eulerDelta.z);
+    dPitch = glm::degrees(eulerDelta.x);
+    dYaw = glm::degrees(eulerDelta.y);
+    timeSinceLastTrick += dt;
+    trick = join(trick_array, " + ");
+
+    static std::string last_trick = "";
+    vec3 up = orientation * vec3(0, 1, 0);
+
+    // we reset the trick status if none was done in 8 seconds
+    if (timeSinceLastTrick > 8) {
+      score = 0;
+      trick_array.clear();
+      string_count = 0;
+      timeSinceLastTrick = 0;
+    }
+		if(trick_array.size() > 12){
+			trick_array.clear();
+		}
+    // dPitch should start on invert tracking
+    switch (splitS_state.state) {
+    case NONE:
+      pitchAcum = 0;
+      splitSTimer = 0;
+      if (abs(dRoll) > 0.5) {
+        rollTriggerTimer += dt;
+        rollTriggerAcum += dRoll;
+
+        if (abs(rollTriggerAcum) >= 150.f && rollTriggerTimer <= maxTricktime) {
+          splitS_state.state = INVERTED;
+          splitSTimer = 0;
+          pitchAcum = 0;
+          rollTriggerAcum = 0;
+          rollTriggerTimer = 0;
+        } else if (rollTriggerTimer > maxTricktime) {
+          rollTriggerAcum = 0;
+          rollTriggerTimer = 0;
         }
-        */
+      }
+      std::cout << "NONE" << std::endl;
+      // if(up.y < -.6) {fsm.state = INVERTED; splitSTimer = 0;}
+      break;
+    case INVERTED:
+      if (up.y > 0)
+        splitS_state.state = NONE;
+      std::cout << "UPSIDE DOWN" << std::endl;
+      splitSTimer += dt;
+      pitchAcum += dPitch;
 
-        previousPosition = position;
-        vec3 up = orientation * vec3(0, 1, 0);
-        vec3 thrust = up * (throttle * 60000.0f); //Max thrust in N
-
-        //prob have to fix this by balancing mass and thrust instead
-        vec3 gravity = vec3(0, -95.0f, 0);
-        vec3 netForce = thrust + (gravity * mass);
-        acceleration = netForce/mass;
-
-
-        //calculate the position through acceleration & velocity
-        velocity += acceleration * dt;
-        velocity *= .99f;
-        position += velocity * dt;
-
-        if (length(velocity) > maxVelocity) {
-            velocity = normalize(velocity) * maxVelocity;
-        }
+      if (splitSTimer > maxTricktime) {
+        pitchAcum = 0;
+        splitS_state.state = NONE;
+      } else if (pitchAcum >= 45.0f) {
+        pitchAcum = 0;
+        splitS_state.state = COMPLETE;
+      }
+      break;
+    case COMPLETE:
+      pitchAcum = 0;
+      std::cout << "COMPLETE" << std::endl;
+      score += 500;
+      trick_array.push_back("Split-s");
+      splitS_state.state = NONE;
+      timeSinceLastTrick = 0;
+      break;
+		case TIMER_START:
+			break;
     }
 
-    void updateTrickState(float dt){
-       // we need to calculate the delta angles for pitch, yaw, and 
-       // roll to see if we complete full rotations
-       glm::quat deltaQ = glm::inverse(prevorientation) * orientation;
-       glm::vec3 eulerDelta = glm::eulerAngles(deltaQ);
+    std::cout << rollAcum << std::endl;
+    switch (roll_state.state) {
+    case NONE:
+      if (abs(dRoll) > 5.0) {
+        roll_state.state = TIMER_START;
+				rollTimer = 0;
+				rollAcum = 0;
+      }
+      break;
+    case TIMER_START:
+      rollTimer += dt;
+      rollAcum += dRoll;
+      if (abs(rollAcum) >= 180.0f && rollTimer <= maxTricktime) {
+        roll_state.state = INVERTED;
+      } else if (rollTimer >= maxTricktime) {
+        roll_state.state = NONE;
+      }
+      break;
 
-       //these hold the delta values in case we are able to add it to total
-       //accum 
-       dRoll= glm::degrees(eulerDelta.z);
-       dPitch= glm::degrees(eulerDelta.x);
-       dYaw= glm::degrees(eulerDelta.y);
-       timeSinceLastTrick += dt; 
-       static std::string last_trick = "";
-
-       if(timeSinceLastTrick > 8){
-            score = 0;
-            trick = "";
-            string_count = 0;
-            timeSinceLastTrick = 0; 
-       }
-
-       if(string_count > 3){
-           string_count = 1;
-           trick = last_trick; 
-       }
-
-
-       //these ensure threshold for the trick to be done within
-       //the maxTricktime limit
-       //
-       //time starts once the delta is over 0.5
-       if(abs(dRoll)> 0.5f){
-         rollTimer += dt;
-         rollAcum += dRoll;
-       }
-
-
-       if(abs(dPitch)> 0.5f){
-         pitchTimer+= dt;
-         pitchAcum += dPitch;
-       }
-
-
-       if(abs(dYaw)> 0.5f){
-         yawTimer+= dt;
-         yawAcum += dYaw;
-       }
-
-       //this checks if the delta in each axis is a full rotation 
-       //and the timer for each axis has not exceeded the maxTricktime
-       if(abs(rollAcum) >= 320.0f && rollTimer <= maxTricktime){
-           score += 200;
-           string_count += 1;
-           if(string_count > 1){
-               trick += " + ";
-           }
-           trick += "barrel roll!";
-           last_trick = "barrel roll!";
-           rollAcum = 0.0f;
-           rollTimer = 0.0f;
-           timeSinceLastTrick = 0.0f;
-       }//if we exceed the maxTrick time reset the time and total delta
-       else if (rollTimer > maxTricktime) { 
-        rollAcum = 0.0f;
-        rollTimer = 0.0f;
-        }
-
-       if(abs(pitchAcum) >= 320.0f && pitchTimer <= maxTricktime){
-           score += 400;
-           string_count += 1;
-           if(string_count > 1){
-                trick += " + ";
-           }
-           trick += "Front/Back flip!";
-           pitchAcum= 0.0f;
-           pitchTimer = 0.0f;
-           timeSinceLastTrick = 0.0f;
-       }else if(pitchTimer > maxTricktime){
-           pitchTimer = 0.0f;
-           pitchAcum = 0.0f;
-       }
-
-       if(abs(yawAcum) >= 360.0f && yawTimer <= maxTricktime){
-           score += 100;
-           string_count += 1;
-           if(string_count > 1){
-                trick += " + ";
-           }
-           trick += "Yaw Spin!";
-           last_trick = "Yaw Spin!";
-           yawAcum = 0.0f;
-           yawTimer = 0.0f;
-           timeSinceLastTrick = 0.0f;
-       }else if(yawTimer > maxTricktime){
-           yawTimer = 0.0f;
-           yawAcum = 0.0f;
-       }
-
-       if(velocity.y < -40){
-           if(!diving){
-               diving = true;
-                diveTextAdded = false;
-           }
-           score += 10;
-
-           if(!diveTextAdded){
-               string_count += 1;
-               if(string_count > 1){
-                    trick += " + ";
-               }
-               trick += "Dive!";
-               last_trick = "Dive!";
-               timeSinceLastTrick = 0.0f;
-               diveTextAdded = true;
-           }
-       }else{
-           diving = false;
-           diveTextAdded = false;
-       }
-       prevorientation = orientation;
+    case INVERTED:
+      if (up.y > -.2)
+        splitS_state.state = NONE;
+      rollTimer += dt;
+      rollAcum += dRoll;
+      if (rollTimer > maxTricktime) {
+        rollAcum = 0;
+        roll_state.state = NONE;
+      } else if (abs(rollAcum) >= 180.0f) {
+        roll_state.state = COMPLETE;
+      }
+			break;
+    case COMPLETE:
+      trick_array.push_back("Roll");
+      roll_state.state = NONE;
+      timeSinceLastTrick = 0;
+			rollTimer = 0;
+			rollAcum = 0;
+      break;
     }
 
-    //we need this to be able to update the drones orientation based
-    //off the inputs from the controller
-    void updateOrientation(float rollVel, float pitchVel, float yawVel, float deltaTime){
-        // Create quaternions around local axes (apply roll -> pitch ->  yaw)
-        float rollDelta  = rollVel  * deltaTime;
-        float pitchDelta = pitchVel * deltaTime;
-        float yawDelta   = yawVel   * deltaTime;
+    /*
+// these ensure threshold for the trick to be done within
+// the maxTricktime limit
+//
+// time starts once the delta is over 0.5
+if (abs(dRoll) > 0.5f) {
+rollTimer += dt;
+rollAcum += dRoll;
+std::cout << rollAcum << std::endl;
+if (abs(rollAcum) >= 150.0f && rollTimer <= maxTricktime) {
+splitS_state.state = INVERTED;
+roll_state.state = INVERTED;
+splitSTimer = 0;
+pitchAcum = 0;
+}
+} else if (rollTimer > maxTricktime) {
+rollAcum = 0.0f;
+rollTimer = 0.0f;
+}
+*/
+    /*
+if (abs(dPitch) > 0.5f) {
+pitchTimer += dt;
+pitchAcum += dPitch;
+}
 
-        glm::quat qRoll  = glm::angleAxis(rollDelta,  glm::vec3(0, 0, 1)); // local Z
-        glm::quat qPitch = glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0)); // local X
-        glm::quat qYaw   = glm::angleAxis(yawDelta,   glm::vec3(0, 1, 0)); // local Y
-        orientation = orientation * qYaw * qPitch * qRoll;
-        orientation = glm::normalize(orientation);
-    }
+if (abs(dYaw) > 0.5f) {
+yawTimer += dt;
+yawAcum += dYaw;
+}
+    */
 
+    /*
 
+// this checks if the delta in each axis is a full rotation
+// and the timer for each axis has not exceeded the maxTricktime
+if (abs(rollAcum) >= 320.0f && rollTimer <= maxTricktime) {
+score += 200;
+string_count += 1;
+if (string_count > 1) {
+trick += " + ";
+}
+trick += "barrel roll!";
+last_trick = "barrel roll!";
+rollAcum = 0.0f;
+rollTimer = 0.0f;
+timeSinceLastTrick = 0.0f;
+} // if we exceed the maxTrick time reset the time and total delta
+else if (rollTimer > maxTricktime) {
+rollAcum = 0.0f;
+rollTimer = 0.0f;
+}
 
+// check for flip
+if (abs(pitchAcum) >= 320.0f && pitchTimer <= maxTricktime) {
+score += 400;
+string_count += 1;
+if (string_count > 1) {
+trick += " + ";
+}
+trick += "Front/Back flip!";
+pitchAcum = 0.0f;
+pitchTimer = 0.0f;
+timeSinceLastTrick = 0.0f;
+} else if (pitchTimer > maxTricktime) {
+pitchTimer = 0.0f;
+pitchAcum = 0.0f;
+}
 
-    void updateMouseOrientation(float phi, float theta, float dt){
-        glm::quat qPitch = glm::angleAxis(glm::radians(phi), glm::vec3(1, 0, 0));   // pitch around X
-        glm::quat qYaw   = glm::angleAxis(glm::radians(theta), glm::vec3(0, 1, 0)); // yaw around Y
+// check for yaw spin
+if (abs(yawAcum) >= 360.0f && yawTimer <= maxTricktime) {
+score += 100;
+string_count += 1;
+if (string_count > 1) {
+trick += " + ";
+}
+trick += "Yaw Spin!";
+last_trick = "Yaw Spin!";
+yawAcum = 0.0f;
+yawTimer = 0.0f;
+timeSinceLastTrick = 0.0f;
+} else if (yawTimer > maxTricktime) {
+yawTimer = 0.0f;
+yawAcum = 0.0f;
+}
 
-        orientation = qYaw * qPitch;
+if (velocity.y < -40) {
+if (!diving) {
+diving = true;
+diveTextAdded = false;
+}
+score += 10;
 
-        orientation = glm::normalize(orientation);}
+if (!diveTextAdded) {
+string_count += 1;
+if (string_count > 1) {
+trick += " + ";
+}
+trick += "Dive!";
+last_trick = "Dive!";
+timeSinceLastTrick = 0.0f;
+diveTextAdded = true;
+}
+} else {
+diving = false;
+diveTextAdded = false;
+}
+    */
+    prevorientation = orientation;
+  }
+
+  // we need this to be able to update the drones orientation based
+  // off the inputs from the controller
+  void updateOrientation(float rollVel, float pitchVel, float yawVel,
+                         float deltaTime) {
+    // Create quaternions around local axes (apply roll -> pitch ->  yaw)
+    float rollDelta = rollVel * deltaTime;
+    float pitchDelta = pitchVel * deltaTime;
+    float yawDelta = yawVel * deltaTime;
+
+    glm::quat qRoll = glm::angleAxis(rollDelta, glm::vec3(0, 0, 1)); // local Z
+    glm::quat qPitch =
+        glm::angleAxis(pitchDelta, glm::vec3(1, 0, 0));            // local X
+    glm::quat qYaw = glm::angleAxis(yawDelta, glm::vec3(0, 1, 0)); // local Y
+    orientation = orientation * qYaw * qPitch * qRoll;
+    orientation = glm::normalize(orientation);
+  }
+
+  void updateMouseOrientation(float phi, float theta, float dt) {
+    glm::quat qPitch =
+        glm::angleAxis(glm::radians(phi), glm::vec3(1, 0, 0)); // pitch around X
+    glm::quat qYaw =
+        glm::angleAxis(glm::radians(theta), glm::vec3(0, 1, 0)); // yaw around Y
+
+    orientation = qYaw * qPitch;
+
+    orientation = glm::normalize(orientation);
+  }
 };
 
 #endif
