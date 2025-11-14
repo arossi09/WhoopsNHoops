@@ -7,6 +7,7 @@
 #include "Drone.h"
 #include "Entity.h"
 #include "GLSL.h"
+#include "Hud.h"
 #include "Lipo.h"
 #include "MatrixStack.h"
 #include "OBB.h"
@@ -38,6 +39,13 @@ using namespace glm;
 class Application : public EventCallbacks {
 
 public:
+  HUDSprite style_meter{
+      glm::vec2(100, 500), glm::vec2(200, 200), glm::vec3(0,0,0), 0.0, 0.0,
+  };
+  // Hud elements
+  Hud hud;
+
+  // scene stuff
   Scene scene;
   ResourceManager resourceManager;
   PhysicsWorld physicsWorld;
@@ -99,7 +107,7 @@ public:
   float eTheta = 0;
   float hTheta = 0;
   bool debugCam = false;
-  bool hud = true;
+  bool hud_flag = true;
 
   vector<shared_ptr<AABB>> draw_boxes;
   bool goCamera = true;
@@ -140,7 +148,7 @@ public:
     }
 
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
-      hud = !hud;
+      hud_flag = !hud_flag;
     }
 
     if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
@@ -164,12 +172,6 @@ public:
     if (debugCam) {
       phi -= deltaY * sensitivity;
       theta += deltaX * sensitivity;
-      /*
-if (phi > 80)
-phi = 80;
-if (phi < -80)
-phi = -80;
-              */
       drone.updateMouseOrientation(phi, theta, .005);
     }
   }
@@ -203,10 +205,6 @@ phi = -80;
     vec3 eye = drone.position;
     vec3 up = drone.orientation * vec3(0, 1, 0);
     direction = glm::normalize(direction);
-
-    // eye + direction for look at because we need look at relative
-    // to where camera is
-    // view->lookAt(eye, eye+direction, vec3(0, 1, 0));
   }
 
   void calculateDeltaTime() {
@@ -261,6 +259,7 @@ phi = -80;
   void resizeCallback(GLFWwindow *window, int width, int height) {
     sensitivity = 180.0f / height;
     glViewport(0, 0, width, height);
+		hud.setScreenSize(width, height);
   }
 
   void init(const std::string &resourceDirectory) {
@@ -350,6 +349,9 @@ phi = -80;
     // set up the scenes models, textures, and physics
     scene.load(resourceDirectory + "/scenes/scene.json", resourceManager);
     scene.setupPhysics(physicsWorld);
+
+    hud.init();
+    hud.addSprite(style_meter);
   }
 
   void initGeom(const std::string &resourceDirectory) {
@@ -526,25 +528,11 @@ phi = -80;
     Model->scale(vec3(scale, scale, scale));
   }
 
-  /*
-given a material sets the uniforms of the program to that corresponding
-* material
-void set_material_uniforms(std::shared_ptr<Program> prog,
-                       const Material &mat) {
-glUniform3fv(prog->getUniform("material.ambient"), 1,
-           glm::value_ptr(mat.ambient));
-glUniform3fv(prog->getUniform("material.diffuse"), 1,
-           glm::value_ptr(mat.diffuse));
-glUniform3fv(prog->getUniform("material.specular"), 1,
-           glm::value_ptr(mat.specular));
-glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
-}
-  */
-
   /*function to render the scene, dt is delta time*/
   void render() {
     // Get current frame buffer size.
     int width, height;
+
 
     initGround();
     glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
@@ -576,6 +564,8 @@ glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
       drone.updateTrickState(dt);
     }
 
+
+		hud.draw();
     // Apply perspective projection.
     Projection->pushMatrix();
     Projection->perspective(45.3f, aspect, 0.01f, 800.0f);
@@ -621,10 +611,6 @@ glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
       glUniformMatrix4fv(solidProg->getUniform("P"), 1, GL_FALSE,
                          value_ptr(Projection->topMatrix()));
       glUniform3f(solidProg->getUniform("color"), 0.0, 0.0, 1.0);
-      // glUniformMatrix4fv(solidProg->getUniform("V"), 1, GL_FALSE,
-      // value_ptr(View->topMatrix()));
-      // glUniform3f(solidProg->getUniform("lightPos"), 2.0+lightTrans, 2.0+lightTrans,
-      // 2.9+lightTrans);
       Model->pushMatrix();
 
       static float propellerAngle = 0.0f;
@@ -801,33 +787,17 @@ glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
     Model->pushMatrix();
     Model->translate(vec3(0, 2, 0));
     Model->scale(vec3(4, 4, 4));
-
     // draw the scene
     scene.draw(texProg, Model->topMatrix());
     // handle the drone collisions among all colliders
     physicsWorld.handleDroneCollisions(drone);
-
     Model->popMatrix();
 
+    drawGround(texProg);
     texProg->unbind();
 
     /*we need this to restrict drone to worldBox*/
     Physics::clampToWorld(worldBox, drone);
-
-    // switch shaders to the texture mapping shader and draw the ground
-    texProg->bind();
-    glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE,
-                       value_ptr(Projection->topMatrix()));
-    glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE,
-                       value_ptr(View->topMatrix()));
-    glUniformMatrix4fv(texProg->getUniform("M"), 1, GL_FALSE,
-                       value_ptr(Model->topMatrix()));
-    glUniform3f(texProg->getUniform("lightDirection"), 1, -1, 1);
-    glUniform1i(texProg->getUniform("flip"), 1);
-
-    drawGround(texProg);
-
-    texProg->unbind();
 
     /*all of the text*/
     textProg->bind();
@@ -845,17 +815,13 @@ glUniform1f(prog->getUniform("material.shininess"), mat.shininess);
                        glm::vec3(1, 1, 1), characters);
       Text::RenderText(textProg, "Press G to start", 250, 100, .7,
                        glm::vec3(0, 1, 0), characters);
-    } else if (!goCamera && hud) {
+    } else if (!goCamera && hud_flag) {
       // main hud
       int speed = static_cast<int>(length(drone.velocity));
       Text::RenderText(textProg, string("SPEED: " + to_string(speed)), 25.0f,
                        25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
       Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f,
                        glm::vec3(0.5, 0.8f, 0.2f), characters);
-      // Text::RenderText(textProg,
-      // to_string(static_cast<int>(drone.battery)), 25.0f, 125.0f, .75f,
-      // glm::vec3(0.5, 0.8f, 0.2f), characters);
-			//
 
       Text::RenderText(textProg, to_string(drone.score), 370.0f, 70.0f, .8f,
                        glm::vec3(1, 1, 1), characters);

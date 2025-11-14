@@ -1,0 +1,7 @@
+#version 330 core
+layout (location = 0) in vec4 vertex;
+uniform mat4 M;
+uniform mat4 P;
+void main(){
+    gl_Position = P * M * vec4(vertex.xy, 0.0, 1.0);
+}
