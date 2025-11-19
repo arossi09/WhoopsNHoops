@@ -13,7 +13,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 struct HUDSprite {
-  //Texture texture;
+	std::shared_ptr<Texture> texture;
   glm::vec2 position;
   glm::vec2 size;
   glm::vec3 color;
@@ -27,13 +27,17 @@ public:
   void init();
   void addSprite(const HUDSprite &sprite);
   void removeSprite(size_t index);
-  void update(float dt);
   void draw();
 	void setScreenSize(int width, int height);
+	void setTargetFill(float amount);
+	void update(float dt);
 
 private:
 	int screenWidth = 800;
 	int screenHeight = 600;
+	float hudFillAmount = 0.0f;
+	float hudTargetFill = 0.0f;
+	float hudDisplayFill = 0.0f;
 	std::shared_ptr<Program> hudShader;
   std::vector<HUDSprite> sprites;
   GLuint VAO, VBO, EBO;

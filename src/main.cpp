@@ -39,9 +39,6 @@ using namespace glm;
 class Application : public EventCallbacks {
 
 public:
-  HUDSprite style_meter{
-      glm::vec2(100, 500), glm::vec2(200, 200), glm::vec3(0,0,0), 0.0, 0.0,
-  };
   // Hud elements
   Hud hud;
 
@@ -75,6 +72,7 @@ public:
   // the image to use as a texture (ground)
   shared_ptr<Texture> texture1;
   shared_ptr<Texture> texture5;
+	shared_ptr<Texture> stylebar_sheet;
   map<char, Character> characters;
   float dt;
 
@@ -346,10 +344,20 @@ public:
     texture5->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
     texture5->setFiltering(GL_NEAREST, GL_NEAREST);
 
+		stylebar_sheet = make_shared<Texture>();
+		stylebar_sheet->setFilename(resourceDirectory + "/stylebar_sheet.png");
+		stylebar_sheet->init();
+		stylebar_sheet->setUnit(1);
+		stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+		stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
+
     // set up the scenes models, textures, and physics
     scene.load(resourceDirectory + "/scenes/scene.json", resourceManager);
     scene.setupPhysics(physicsWorld);
 
+		HUDSprite style_meter{
+				stylebar_sheet, glm::vec2(650, 450), glm::vec2(384, 196), glm::vec3(0,0,0), 0.0, 0.0,
+		};
     hud.init();
     hud.addSprite(style_meter);
   }
@@ -515,18 +523,6 @@ public:
                        value_ptr(M->topMatrix()));
   }
 
-  /*resizes the model into -1 to 1 range and centers at the origin*/
-  void resize_and_center(vec3 gMin, vec3 gMax, shared_ptr<MatrixStack> Model) {
-    float center_x = (gMax.x + gMin.x) / 2;
-    float center_y = (gMax.y + gMin.y) / 2;
-    float center_z = (gMax.z + gMin.z) / 2;
-
-    float largest_extent = std::max(
-        std::max((gMax.x - gMin.x), (gMax.y - gMin.y)), (gMax.z - gMin.z));
-    float scale = 2.0 / largest_extent;
-    Model->translate(vec3(-center_x, -center_y, -center_z));
-    Model->scale(vec3(scale, scale, scale));
-  }
 
   /*function to render the scene, dt is delta time*/
   void render() {
@@ -537,6 +533,7 @@ public:
     initGround();
     glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
     glViewport(0, 0, width, height);
+
 
     // Clear framebuffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -564,8 +561,6 @@ public:
       drone.updateTrickState(dt);
     }
 
-
-		hud.draw();
     // Apply perspective projection.
     Projection->pushMatrix();
     Projection->perspective(45.3f, aspect, 0.01f, 800.0f);
@@ -604,6 +599,7 @@ public:
     glUniformMatrix4fv(bboxProg->getUniform("V"), 1, GL_FALSE,
                        value_ptr(View->topMatrix()));
     bboxProg->unbind();
+
 
     // draw the drone
     if (!goCamera) {
@@ -784,6 +780,7 @@ public:
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+
     Model->pushMatrix();
     Model->translate(vec3(0, 2, 0));
     Model->scale(vec3(4, 4, 4));
@@ -843,6 +840,11 @@ public:
     textProg->unbind();
     glDisable(GL_BLEND);
 
+		float maxScore = 3000.0f;
+		float fill = drone.score /maxScore - dt;
+		hud.setTargetFill(fill);
+		hud.update(dt);
+		hud.draw();
     // animation update example
     sTheta = sin(glfwGetTime());
     cTheta = cos(glfwGetTime());
@@ -903,7 +905,6 @@ int main(int argc, char *argv[]) {
   // Loop until the user closes the window.
   while (!glfwWindowShouldClose(windowManager->getHandle())) {
     application->calculateDeltaTime();
-
     // Render scene.
     application->render();
     application->processKeyInput(

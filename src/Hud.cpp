@@ -1,8 +1,6 @@
 #include "Hud.h"
 #include "MatrixStack.h"
 
-
-
 void Hud::init() {
   float vertices[] = {0.f, 1.f, 1.0f, 1.0f,  // top right
                       1.f, 1.f, 1.0f, 0.0f,  // bottom right
@@ -41,24 +39,41 @@ void Hud::init() {
   hudShader->addUniform("P");
   hudShader->addUniform("M");
   hudShader->addUniform("Texture0");
+  hudShader->addUniform("uFilled");
 }
 
 void Hud::addSprite(const HUDSprite &sprite) { sprites.push_back(sprite); }
 
 void Hud::draw() {
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   hudShader->bind();
+  glUniform1f(hudShader->getUniform("uFilled"), hudDisplayFill);
   glUniformMatrix4fv(hudShader->getUniform("P"), 1, GL_FALSE,
                      value_ptr(orthoProj));
   glBindVertexArray(VAO);
   auto Model = std::make_shared<MatrixStack>();
   for (const auto &sprite : sprites) {
+    sprite.texture->bind(hudShader->getUniform("Texture0"));
     glm::mat4 M(1.0f);
     M = glm::translate(M, glm::vec3(sprite.position, 0.f));
+    M = glm::rotate(M, glm::radians(-90.0f), glm::vec3(0, 0, 1));
     M = glm::scale(M, glm::vec3(sprite.size, 1.f));
     glUniformMatrix4fv(hudShader->getUniform("M"), 1, GL_FALSE, value_ptr(M));
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   }
   hudShader->unbind();
+  glDisable(GL_BLEND);
+}
+
+void Hud::setTargetFill(float amount) {
+  hudTargetFill= glm::clamp(amount, 0.0f, 1.0f);
+}
+
+void Hud::update(float dt){
+	float speed = 2;
+	hudDisplayFill = glm::mix(hudDisplayFill, hudTargetFill, dt*speed);
 }
 
 void Hud::setScreenSize(int width, int height) {
