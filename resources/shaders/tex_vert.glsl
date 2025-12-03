@@ -10,25 +10,21 @@ uniform int lightToggle;
 
 out vec3 fragNor;
 out vec2 vTexCoord;
+out vec3 vWorldPosition;
 
 void main() {
-
-  gl_Position = P * V *M * vec4(vertPos.xyz, 1.0);
-
-
-
+  gl_Position = P * V * M * vec4(vertPos.xyz, 1.0);
+  vWorldPosition = (M * vec4(vertPos.xyz, 1.0)).xyz;
 
   //lightDir = (V*(vec4(lightPos - wPos, 0.0))).xyz;
   fragNor = (M * vec4(vertNor, 0.0)).xyz;
   //lightDir = normalize((V * vec4(lightPos, 0.0)).xyz); for sun
 
   /* First model transforms */
-  if(flip == 0){
-        fragNor = -fragNor;
+  if (flip == 0) {
+    fragNor = -fragNor;
   }
 
-  
   /* pass through the texture coordinates to be interpolated */
   vTexCoord = vertTex;
 }
-

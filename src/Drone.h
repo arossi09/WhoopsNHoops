@@ -12,8 +12,6 @@ using namespace glm;
 #define DECAY_RATE .01
 #define THROTTLE_FACTOR .5
 
-enum drone_states { INVERTED, NONE, COMPLETE, TIMER_START };
-
 template <typename T>
 std::string join(const std::vector<T> &arr, const std::string &delimiter) {
   std::string result = "";
@@ -27,15 +25,10 @@ std::string join(const std::vector<T> &arr, const std::string &delimiter) {
   return result;
 }
 
-struct Fsm {
-  enum drone_states state;
-  enum drone_states previous_state;
-};
-
 // drone struct with attributes and update
 struct Drone {
-  Fsm splitS_state;
-  Fsm roll_state;
+  glm::vec3 light_blue = {0.56, 0.9, 1.0};
+  glm::vec3 gold = {1.0, 0.9, 0.0};
   float battery = 100.0f;
   float superRate = 0.61f;
   float rcRate = 1.0f;
@@ -49,16 +42,19 @@ struct Drone {
   float mass = 250.0f;
   float camera_title_angle = 25;
 
+  glm::vec3 droneColor = light_blue;
+
   std::string trick = "";
   int string_count = 0;
   int score = 0;
+  bool special_mode = false;
+  float special_score_thresh = 3000.0f;
 
   // prob move this to another struct
   float rollInput = 0.0f;
   float pitchInput = 0.0f;
   float yawInput = 0.0f;
   float throttle = 0.0;
-
 
   // trick detector
   TrickManager trickManager;
@@ -74,14 +70,6 @@ struct Drone {
 
   // calculate drone physics
   void updatePosition(float dt) {
-    /*
-    battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
-    battery = max(battery, 0.0f);
-    if(battery> 100.0f ){
-        battery = 100.0f;
-    }
-    */
-
     previousPosition = position;
     vec3 up = orientation * vec3(0, 1, 0);
     vec3 thrust = up * (throttle * 60000.0f); // Max thrust in N
@@ -115,8 +103,24 @@ struct Drone {
     score = trickManager.score;
     vec3 up = orientation * vec3(0, 1, 0);
     trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime);
+
+    // we need to set drone to special mode if above score of 3000
+    if (score >= special_score_thresh) {
+      special_mode = true;
+      droneColor = gold;
+      maxVelocity = 150.0f;
+    } else {
+      special_mode = false;
+      droneColor = light_blue;
+      maxVelocity = 100.0f;
+    }
+
     prevorientation = orientation;
   }
+	
+	void resetScore(){
+		trickManager.reset();
+	}
 
   // we need this to be able to update the drones orientation based
   // off the inputs from the controller

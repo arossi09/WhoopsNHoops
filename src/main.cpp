@@ -21,6 +21,7 @@
 #include "Text.h"
 #include "Texture.h"
 #include "WindowManager.h"
+#include "skybox.h"
 
 #define PI 3.14
 
@@ -41,6 +42,14 @@ class Application : public EventCallbacks {
 public:
   // Hud elements
   Hud hud;
+  HUDSprite style_meter;
+
+  // we neeed to load in the faces for skybox
+  std::vector<std::string> faces = {
+      "/skybox/px.png", "/skybox/nx.png", "/skybox/py.png",
+      "/skybox/ny.png", "/skybox/pz.png", "/skybox/nz.png",
+  };
+  Skybox skybox;
 
   // scene stuff
   Scene scene;
@@ -52,9 +61,9 @@ public:
   // render class
   // Our shader program
   std::shared_ptr<Program> textProg;
-  std::shared_ptr<Program> bboxProg;
   std::shared_ptr<Program> texProg;
   std::shared_ptr<Program> solidProg;
+  std::shared_ptr<Program> skyProg;
 
   // our geometry
   shared_ptr<Shape> sphere;
@@ -72,7 +81,7 @@ public:
   // the image to use as a texture (ground)
   shared_ptr<Texture> texture1;
   shared_ptr<Texture> texture5;
-	shared_ptr<Texture> stylebar_sheet;
+  shared_ptr<Texture> stylebar_sheet;
   map<char, Character> characters;
   float dt;
 
@@ -257,7 +266,7 @@ public:
   void resizeCallback(GLFWwindow *window, int width, int height) {
     sensitivity = 180.0f / height;
     glViewport(0, 0, width, height);
-		hud.setScreenSize(width, height);
+    hud.setScreenSize(width, height);
   }
 
   void init(const std::string &resourceDirectory) {
@@ -278,10 +287,11 @@ public:
         Spline(glm::vec3(150, 10, 10), glm::vec3(150, 10, 10),
                glm::vec3(150, 10, -20), glm::vec3(150, 10, -20), 10);
 
+    // solid program for drawing solid colored objects
     solidProg = make_shared<Program>();
     solidProg->setVerbose(true);
-    solidProg->setShaderNames(resourceDirectory + "/solid_vert.glsl",
-                              resourceDirectory + "/solid_frag.glsl");
+    solidProg->setShaderNames(resourceDirectory + "/shaders/solid_vert.glsl",
+                              resourceDirectory + "/shaders/solid_frag.glsl");
     solidProg->init();
     solidProg->addUniform("P");
     solidProg->addUniform("M");
@@ -289,10 +299,11 @@ public:
     solidProg->addAttribute("vertPos");
     solidProg->addAttribute("vertNor");
 
+    // text program for drawing text to screen
     textProg = make_shared<Program>();
     textProg->setVerbose(true);
-    textProg->setShaderNames(resourceDirectory + "/text_vert.glsl",
-                             resourceDirectory + "/text_frag.glsl");
+    textProg->setShaderNames(resourceDirectory + "/shaders/text_vert.glsl",
+                             resourceDirectory + "/shaders/text_frag.glsl");
     textProg->init();
     textProg->addUniform("P");
     textProg->addUniform("M");
@@ -305,30 +316,30 @@ public:
     // Initialize the GLSL program that we will use for texture mapping
     texProg = make_shared<Program>();
     texProg->setVerbose(true);
-    texProg->setShaderNames(resourceDirectory + "/tex_vert.glsl",
-                            resourceDirectory + "/tex_frag0.glsl");
+    texProg->setShaderNames(resourceDirectory + "/shaders/tex_vert.glsl",
+                            resourceDirectory + "/shaders/tex_frag0.glsl");
     texProg->init();
     texProg->addUniform("P");
     texProg->addUniform("V");
     texProg->addUniform("M");
     texProg->addUniform("lightDirection");
     texProg->addUniform("flip");
+    texProg->addUniform("cameraPosition");
     texProg->addUniform("Texture0");
     texProg->addUniform("lightToggle");
     texProg->addAttribute("vertPos");
     texProg->addAttribute("vertNor");
     texProg->addAttribute("vertTex");
 
-    // we need this program in case of wanting to draw bounding box
-    bboxProg = make_shared<Program>();
-    bboxProg->setVerbose(true);
-    bboxProg->setShaderNames(resourceDirectory + "/silhoutte_vert.glsl",
-                             resourceDirectory + "/silhoutte_frag.glsl");
-    bboxProg->init();
-    bboxProg->addUniform("P");
-    bboxProg->addUniform("V");
-    bboxProg->addUniform("M");
-    bboxProg->addAttribute("vertPos");
+    skyProg = make_shared<Program>();
+    skyProg->setVerbose(true);
+    skyProg->setShaderNames(resourceDirectory + "/shaders/skyVS.glsl",
+                            resourceDirectory + "/shaders/skyFS.glsl");
+    skyProg->init();
+    skyProg->addUniform("P");
+    skyProg->addUniform("V");
+    skyProg->addUniform("skybox");
+    skyProg->addAttribute("vertPos");
 
     texture1 = make_shared<Texture>();
     texture1->setFilename(resourceDirectory + "/sky_28_2k.png");
@@ -344,22 +355,30 @@ public:
     texture5->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
     texture5->setFiltering(GL_NEAREST, GL_NEAREST);
 
-		stylebar_sheet = make_shared<Texture>();
-		stylebar_sheet->setFilename(resourceDirectory + "/stylebar_sheet.png");
-		stylebar_sheet->init();
-		stylebar_sheet->setUnit(1);
-		stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-		stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
+    stylebar_sheet = make_shared<Texture>();
+    stylebar_sheet->setFilename(resourceDirectory + "/stylebar_sheet.png");
+    stylebar_sheet->init();
+    stylebar_sheet->setUnit(1);
+    stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+    stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
 
     // set up the scenes models, textures, and physics
     scene.load(resourceDirectory + "/scenes/scene.json", resourceManager);
     scene.setupPhysics(physicsWorld);
 
-		HUDSprite style_meter{
-				stylebar_sheet, glm::vec2(650, 450), glm::vec2(384, 196), glm::vec3(0,0,0), 0.0, 0.0,
-		};
+    style_meter = {
+        stylebar_sheet,
+        glm::vec2(45, 600),
+        glm::vec2(170, 312),
+        glm::vec3(0, 0, 0),
+        0.0,
+        0.0,
+    };
     hud.init();
     hud.addSprite(style_meter);
+
+    skybox.setFaces(faces);
+    skybox.init();
   }
 
   void initGeom(const std::string &resourceDirectory) {
@@ -523,23 +542,17 @@ public:
                        value_ptr(M->topMatrix()));
   }
 
-
   /*function to render the scene, dt is delta time*/
   void render() {
     // Get current frame buffer size.
     int width, height;
-
-
     initGround();
     glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
     glViewport(0, 0, width, height);
 
-
     // Clear framebuffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     float aspect = width / (float)height;
-
     // Create the matrix stacks
     auto Projection = make_shared<MatrixStack>();
     auto View = make_shared<MatrixStack>();
@@ -563,7 +576,7 @@ public:
 
     // Apply perspective projection.
     Projection->pushMatrix();
-    Projection->perspective(45.3f, aspect, 0.01f, 800.0f);
+    Projection->perspective(glm::radians(75.0f), aspect, 0.01f, 800.0f);
     // View is global translation along negative z for now
     View->pushMatrix();
     View->loadIdentity();
@@ -573,199 +586,19 @@ public:
     glm::mat4 P_ortho = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
 
     // draw skybox
-    texProg->bind();
-    glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE,
+    skyProg->bind();
+
+    glDepthFunc(GL_LEQUAL);
+    glUniformMatrix4fv(skyProg->getUniform("P"), 1, GL_FALSE,
                        value_ptr(Projection->topMatrix()));
-    glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE,
-                       value_ptr(View->topMatrix()));
-    glUniform3f(texProg->getUniform("lightDirection"), .5f, -1, 1);
-    glUniform1i(texProg->getUniform("flip"), 0);
-    glUniform1i(texProg->getUniform("lightToggle"), 0);
+    glm::mat4 skyboxView = glm::mat4(glm::mat3(View->topMatrix()));
+    glUniformMatrix4fv(skyProg->getUniform("V"), 1, GL_FALSE,
+                       value_ptr(skyboxView));
+    glUniform1i(skyProg->getUniform("skybox"), 0);
+    skybox.draw();
+    glDepthFunc(GL_LESS);
+    skyProg->unbind();
 
-    Model->pushMatrix();
-    texture1->bind(texProg->getUniform("Texture0"));
-
-    Model->translate(vec3(0, -30, 0));
-    Model->rotate(PI / 2, vec3(0, 1, 0));
-    Model->scale(vec3(600, 600, 600));
-    setModel(texProg, Model);
-    sphere->draw(texProg);
-    Model->popMatrix();
-    texProg->unbind();
-
-    bboxProg->bind();
-    glUniformMatrix4fv(bboxProg->getUniform("P"), 1, GL_FALSE,
-                       value_ptr(Projection->topMatrix()));
-    glUniformMatrix4fv(bboxProg->getUniform("V"), 1, GL_FALSE,
-                       value_ptr(View->topMatrix()));
-    bboxProg->unbind();
-
-
-    // draw the drone
-    if (!goCamera) {
-      solidProg->bind();
-      glUniformMatrix4fv(solidProg->getUniform("P"), 1, GL_FALSE,
-                         value_ptr(Projection->topMatrix()));
-      glUniform3f(solidProg->getUniform("color"), 0.0, 0.0, 1.0);
-      Model->pushMatrix();
-
-      static float propellerAngle = 0.0f;
-      float spinSpeed = 360.0f * drone.throttle;
-      propellerAngle += spinSpeed * dt;
-      glm::quat fix = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
-      glm::quat fixedOrientation = drone.orientation * fix;
-      glm::mat4 rot = glm::mat4_cast(fixedOrientation);
-      glUniform3f(solidProg->getUniform("color"), 0.56, 0.9, 1.0);
-      Model->translate(vec3(1.2, -1.2, -2));
-      Model->multMatrix(rot);
-      Model->scale(vec3(.2, .05, .2));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 0.4, 0.4, 0.4);
-      Model->translate(vec3(.2, 1.5, 0));
-      Model->scale(vec3(.5, 2, .5));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-
-      Model->pushMatrix();
-      Model->translate(vec3(-.2, .5, 0));
-      Model->rotate(PI / 3, vec3(0, 0, 1));
-      Model->scale(vec3(1, 1, .3));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 0.1, 0.1, 0.1);
-      Model->translate(vec3(.4, 1.5, 0));
-      Model->scale(vec3(.3, 1.5, .3));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 0.56, 0.9, 1.0);
-      Model->translate(vec3(.7, -.1, .7));
-      Model->scale(vec3(.8, .8, .8));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-      Model->translate(vec3(0, .5, 0));
-      Model->rotate(-propellerAngle, vec3(0, 1, 0));
-      Model->scale(vec3(.3, .5, .3));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      // props accros
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(4, .2, .5));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(.5, .2, 4));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-
-      Model->popMatrix();
-      Model->popMatrix();
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 0.56, 0.9, 1.0);
-      Model->translate(vec3(-.7, -.1, .7));
-      Model->scale(vec3(.8, .8, .8));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-      Model->translate(vec3(0, .5, 0));
-      Model->rotate(-propellerAngle, vec3(0, 1, 0));
-      Model->scale(vec3(.3, .5, .3));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      // props accros
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(4, .2, .5));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(.5, .2, 4));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-
-      Model->popMatrix();
-      Model->popMatrix();
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 0.56, 0.9, 1.0);
-      Model->translate(vec3(.7, -.1, -.7));
-      Model->scale(vec3(.8, .8, .8));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-      Model->translate(vec3(0, .5, 0));
-      Model->rotate(propellerAngle, vec3(0, 1, 0));
-      Model->scale(vec3(.3, .5, .3));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      // props accros
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(4, .2, .5));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(.5, .2, 4));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-
-      Model->popMatrix();
-      Model->popMatrix();
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 0.56, 0.9, 1.0);
-      Model->translate(vec3(-.7, -.1, -.7));
-      Model->scale(vec3(.8, .8, .8));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      // prop middle
-      Model->pushMatrix();
-      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-      Model->translate(vec3(0, .5, 0));
-      Model->rotate(propellerAngle, vec3(0, 1, 0));
-      Model->scale(vec3(.3, .5, .3));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      // props accros
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(4, .2, .5));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-      Model->pushMatrix();
-      Model->translate(vec3(0, .5, 0));
-      Model->scale(vec3(.5, .2, 4));
-      setModel(solidProg, Model);
-      cube->draw(solidProg);
-      Model->popMatrix();
-
-      Model->popMatrix();
-      Model->popMatrix();
-      Model->popMatrix();
-      solidProg->unbind();
-    }
 
     // Main scene
     texProg->bind();
@@ -774,12 +607,13 @@ public:
     glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE,
                        value_ptr(View->topMatrix()));
     glUniform3f(texProg->getUniform("lightDirection"), 1, -1, 1);
+    glUniform3fv(texProg->getUniform("cameraPosition"), 1,
+                 value_ptr(drone.position));
     glUniform1i(texProg->getUniform("flip"), 1);
     glUniform1i(texProg->getUniform("lightToggle"), 1);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 
     Model->pushMatrix();
     Model->translate(vec3(0, 2, 0));
@@ -840,17 +674,195 @@ public:
     textProg->unbind();
     glDisable(GL_BLEND);
 
-		float maxScore = 3000.0f;
-		float fill = drone.score /maxScore - dt;
-		hud.setTargetFill(fill);
-		hud.update(dt);
-		hud.draw();
+    // draw and update hud
+    if (!goCamera) {
+      float fill = drone.score / drone.special_score_thresh - dt;
+      hud.setTargetFill(fill);
+      hud.update(dt);
+      hud.draw();
+      if (drone.special_mode) {
+        style_meter.size = glm::vec2(sTheta, cTheta);
+      }
+    }
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+    // draw the drone
+    if (!goCamera) {
+      solidProg->bind();
+      glUniformMatrix4fv(solidProg->getUniform("P"), 1, GL_FALSE,
+                         value_ptr(Projection->topMatrix()));
+      glUniform3f(solidProg->getUniform("color"), 0.0, 0.0, 1.0);
+      Model->pushMatrix();
+
+      static float propellerAngle = 0.0f;
+      float spinSpeed = 360.0f * drone.throttle;
+      propellerAngle += spinSpeed * dt;
+      glm::quat fix = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+      glm::quat fixedOrientation = drone.orientation * fix;
+      glm::mat4 rot = glm::mat4_cast(fixedOrientation);
+
+      glUniform3fv(solidProg->getUniform("color"), 1,
+                   glm::value_ptr(drone.droneColor));
+      Model->translate(vec3(1.8, -1.2, -2));
+      Model->multMatrix(rot);
+      Model->scale(vec3(.2, .05, .2));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 0.4, 0.4, 0.4);
+      Model->translate(vec3(.2, 1.5, 0));
+      Model->scale(vec3(.5, 2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+
+      Model->pushMatrix();
+      Model->translate(vec3(-.2, .5, 0));
+      Model->rotate(PI / 3, vec3(0, 0, 1));
+      Model->scale(vec3(1, 1, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 0.1, 0.1, 0.1);
+      Model->translate(vec3(.4, 1.5, 0));
+      Model->scale(vec3(.3, 1.5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      glUniform3fv(solidProg->getUniform("color"), 1,
+                   glm::value_ptr(drone.droneColor));
+      Model->translate(vec3(.7, -.1, .7));
+      Model->scale(vec3(.8, .8, .8));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(-propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+
+      Model->popMatrix();
+      Model->popMatrix();
+      Model->pushMatrix();
+      glUniform3fv(solidProg->getUniform("color"), 1,
+                   glm::value_ptr(drone.droneColor));
+      Model->translate(vec3(-.7, -.1, .7));
+      Model->scale(vec3(.8, .8, .8));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(-propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+
+      Model->popMatrix();
+      Model->popMatrix();
+      Model->pushMatrix();
+      glUniform3fv(solidProg->getUniform("color"), 1,
+                   glm::value_ptr(drone.droneColor));
+      Model->translate(vec3(.7, -.1, -.7));
+      Model->scale(vec3(.8, .8, .8));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+
+      Model->popMatrix();
+      Model->popMatrix();
+      Model->pushMatrix();
+      glUniform3fv(solidProg->getUniform("color"), 1,
+                   glm::value_ptr(drone.droneColor));
+      Model->translate(vec3(-.7, -.1, -.7));
+      Model->scale(vec3(.8, .8, .8));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // prop middle
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+
+      Model->popMatrix();
+      Model->popMatrix();
+      Model->popMatrix();
+      solidProg->unbind();
+    }
+
     // animation update example
     sTheta = sin(glfwGetTime());
     cTheta = cos(glfwGetTime());
     eTheta = std::max(0.0f, (float)sin(glfwGetTime()));
     hTheta = std::max(0.0f, (float)cos(glfwGetTime()));
-
     // Pop matrix stacks.
     Projection->popMatrix();
     View->popMatrix();

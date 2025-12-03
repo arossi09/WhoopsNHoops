@@ -7,6 +7,7 @@ namespace Physics{
         //if(distance(drone.position, box->getCenter())< 5){
         if(droneBox.intersects(box)){
             resolveAABBCollision(box, drone);
+						drone.resetScore();
         }
     }
 
@@ -14,10 +15,9 @@ namespace Physics{
         AABB droneBox = drone.getAABB();
         OBB transformedBox = box.transformed(model);
         AABB cOBB = transformedBox.toAABB();
-        //if(distance(drone.position, box->getCenter())< 5){
-        //
         if(transformedBox.intersects(droneBox)){
             resolveAABBCollision(cOBB, drone); 
+						//reset drone score
         }
     }
 

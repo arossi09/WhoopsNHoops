@@ -47,6 +47,10 @@ public:
     }
   }
 
+	void reset(){
+		resetAll();
+	}
+
 private:
   void resetTrickTimer() { timeSinceLastTrick = 0.0f; }
   void resetAll() {

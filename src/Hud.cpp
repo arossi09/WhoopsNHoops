@@ -33,8 +33,8 @@ void Hud::init() {
 
   hudShader = std::make_shared<Program>();
   hudShader->setVerbose(true);
-  hudShader->setShaderNames(resourceDir + "/hudVS.glsl",
-                            resourceDir + "/hudFS.glsl");
+  hudShader->setShaderNames(resourceDir + "/shaders/hudVS.glsl",
+                            resourceDir + "/shaders/hudFS.glsl");
   hudShader->init();
   hudShader->addUniform("P");
   hudShader->addUniform("M");
@@ -45,7 +45,6 @@ void Hud::init() {
 void Hud::addSprite(const HUDSprite &sprite) { sprites.push_back(sprite); }
 
 void Hud::draw() {
-
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   hudShader->bind();
@@ -75,6 +74,7 @@ void Hud::update(float dt){
 	float speed = 2;
 	hudDisplayFill = glm::mix(hudDisplayFill, hudTargetFill, dt*speed);
 }
+
 
 void Hud::setScreenSize(int width, int height) {
   screenWidth = width;

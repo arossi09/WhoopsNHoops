@@ -6,7 +6,7 @@ in vec2 vTexCoord;
 uniform float uFilled;
 
 void main(){
-		float offset = vTexCoord.y > uFilled ? 0.0 : 0.5;
+		float offset = vTexCoord.x > uFilled ? 0.0 : 0.5;
 		vec2 texCoord = vec2(vTexCoord.x / 2 + offset, vTexCoord.y);
 		vec4 texColor0 = texture(Texture0, texCoord);
     color = texColor0;

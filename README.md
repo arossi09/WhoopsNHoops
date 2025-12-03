@@ -18,3 +18,10 @@ cmake ..
 make
 ./WhoopsnHoops
 
+
+# TODO
+
+fix hud logic so more module
+fix skybox rendering so its able to render after all draws for preformance
+add hud element behind drone model 
+add fog attentuation from height (maybe with noise factor)
