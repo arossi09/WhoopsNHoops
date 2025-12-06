@@ -5,10 +5,8 @@
 
 #include "AABB.h"
 #include "Drone.h"
-#include "Entity.h"
 #include "GLSL.h"
 #include "Hud.h"
-#include "Lipo.h"
 #include "MatrixStack.h"
 #include "OBB.h"
 #include "Physics.h"
@@ -21,6 +19,7 @@
 #include "Text.h"
 #include "Texture.h"
 #include "WindowManager.h"
+#include "ocean.h"
 #include "skybox.h"
 
 #define PI 3.14
@@ -50,6 +49,7 @@ public:
       "/skybox/ny.png", "/skybox/pz.png", "/skybox/nz.png",
   };
   Skybox skybox;
+  Ocean ocean;
 
   // scene stuff
   Scene scene;
@@ -379,6 +379,9 @@ public:
 
     skybox.setFaces(faces);
     skybox.init();
+
+    ocean.setResourceDir(resourceDirectory);
+    ocean.init();
   }
 
   void initGeom(const std::string &resourceDirectory) {
@@ -599,6 +602,13 @@ public:
     glDepthFunc(GL_LESS);
     skyProg->unbind();
 
+    Model->pushMatrix();
+		Model->loadIdentity();
+		Model->translate(vec3(-800, -60, -900));
+		Model->scale(vec3(100, 50, 100));
+    ocean.render(Model->topMatrix(), View->topMatrix(), Projection->topMatrix(),
+                 drone.position, glm::vec3(0, -0.5f, 1.0f), glfwGetTime());
+    Model->popMatrix();
 
     // Main scene
     texProg->bind();
@@ -624,7 +634,7 @@ public:
     physicsWorld.handleDroneCollisions(drone);
     Model->popMatrix();
 
-    drawGround(texProg);
+    //drawGround(texProg);
     texProg->unbind();
 
     /*we need this to restrict drone to worldBox*/
@@ -684,7 +694,7 @@ public:
         style_meter.size = glm::vec2(sTheta, cTheta);
       }
     }
-		glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
     // draw the drone
     if (!goCamera) {
