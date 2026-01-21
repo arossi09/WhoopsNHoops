@@ -8,10 +8,17 @@ public:
   std::vector<std::string> trickArray;
   float score = 0.0f;
   float timeSinceLastTrick = 0.f;
+	int trickCount = 0;
+	int scoreMultipler = 1;
 
   TrickStateMachine splitSFSM{TrickType::SplitS};
   TrickStateMachine rollFSM{TrickType::Roll};
   TrickStateMachine flipFSM{TrickType::Flip};
+
+	void incrementMultipler(){
+		scoreMultipler++;
+		score *= scoreMultipler;
+	}
 
 	//src/TrickManager
   void update(float dPitch, float dRoll, float dYaw, const glm::vec3 &up,
@@ -24,6 +31,7 @@ public:
     if (splitSFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("splitS");
       score += 500;
+			trickCount++;
       resetTrickTimer();
 			return;
     }
@@ -31,6 +39,7 @@ public:
     if (rollFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("roll");
       score += 150;
+			trickCount++;
       resetTrickTimer();
 			return;
     }
@@ -38,6 +47,7 @@ public:
 		if(flipFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)){
       trickArray.push_back("flip");
       score += 150;
+			trickCount++;
       resetTrickTimer();
 			return;
 		}
@@ -57,5 +67,7 @@ private:
     timeSinceLastTrick = 0.0f;
     trickArray.clear();
     score = 0.0f;
+		trickCount = 0;
+		//scoreMultipler= 1;
   }
 };

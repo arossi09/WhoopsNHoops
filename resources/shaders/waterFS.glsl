@@ -19,7 +19,7 @@ out vec4 FragColor;
 in vec3 Normal;
 in vec3 fragPos;
 
-float uFresnalNormalStrength = 1.3; 
+float uFresnalNormalStrength = 1.0; 
 float uFresnalShininess = 3.65;
 float uFresnalBias = 0.182; 
 float uFresnalStrength = 0.7;
@@ -88,7 +88,7 @@ void main()
   vec3 finalColor = lighting + tipColor + fresnel;
   //vec3 finalColor = mix(baseColor, reflection, R); // blends reflection smoothly
   
-  vec3 fogColor = vec3(0.7, 0.7, 0.8);
+  vec3 fogColor = vec3(0.5, 0.6, 0.7);
   float fogDensity = 0.0025;
   vec3 fogOrigin = viewPos;
   float fogDepth = distance(fragPos, fogOrigin);
@@ -115,10 +115,18 @@ vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
   float spec = pow(max(dot(halfway, normal), 0.0), material.shininess)*ndotl ;
   vec3 specular = light.specular.rgb * (spec * material.specular) ;
 
+
+	float f0 = 0.38;   // Water reflectance at normal incidence
+	float hv = clamp(dot(viewDir, normal), 0.0, 1.0);
+	float fresnelSpec = f0 + (1.0 - f0) * pow(1.0 - hv, 5.0);
+	specular *= fresnelSpec;
+
+	/*
   float base = 1 - max(dot(viewDir, halfway), 0.0);
   float exponential = pow(base, 5.0f);
   float R = exponential + uFresnalBias * (1.0f - exponential);
   specular *= R;
+	*/
 
   return (ambient + diffuse + specular);
 }

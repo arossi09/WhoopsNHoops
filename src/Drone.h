@@ -45,10 +45,11 @@ struct Drone {
   glm::vec3 droneColor = light_blue;
 
   std::string trick = "";
-  int string_count = 0;
   int score = 0;
+	int totalScore = 0;
   bool special_mode = false;
   float special_score_thresh = 3000.0f;
+  int trickCount = 0;
 
   // prob move this to another struct
   float rollInput = 0.0f;
@@ -70,6 +71,11 @@ struct Drone {
 
   // calculate drone physics
   void updatePosition(float dt) {
+    battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
+    battery = max(battery, 0.0f);
+    if (battery > 100.0f) {
+      battery = 100.0f;
+    }
     previousPosition = position;
     vec3 up = orientation * vec3(0, 1, 0);
     vec3 thrust = up * (throttle * 60000.0f); // Max thrust in N
@@ -101,6 +107,7 @@ struct Drone {
     dYaw = glm::degrees(eulerDelta.y);
     trick = join(trickManager.trickArray, " + ");
     score = trickManager.score;
+    trickCount = trickManager.trickCount;
     vec3 up = orientation * vec3(0, 1, 0);
     trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime);
 
@@ -117,10 +124,11 @@ struct Drone {
 
     prevorientation = orientation;
   }
-	
-	void resetScore(){
-		trickManager.reset();
-	}
+
+  void resetScore() {
+    totalScore += score;
+    trickManager.reset();
+  }
 
   // we need this to be able to update the drones orientation based
   // off the inputs from the controller

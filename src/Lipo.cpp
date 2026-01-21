@@ -28,12 +28,13 @@ Lipo::Lipo(glm::vec3 pos, const std::string resourceDirectory){
     //initlize the background prog
     shadowProg = std::make_shared<Program>();
     shadowProg->setVerbose(true);
-    shadowProg->setShaderNames(resourceDirectory + "/lipo_shadow_vert.glsl", resourceDirectory + "/lipo_shadow_frag.glsl");
+    shadowProg->setShaderNames(resourceDirectory + "/shaders/lipo_shadow_vert.glsl", resourceDirectory + "/shaders/lipo_shadow_frag.glsl");
     shadowProg->init();
     shadowProg->addUniform("M");
     shadowProg->addUniform("V");
     shadowProg->addUniform("P");
     shadowProg->addAttribute("vertPos");
+    shadowProg->addAttribute("vertTex");
     shadowProg->addAttribute("vertNor");
 }
 
@@ -86,6 +87,7 @@ void Lipo::update(float dt, Drone &drone){
     //start timer
     return;
 }
+
 
 void Lipo::chargeBattery(Drone drone){
     drone.battery = 100.0f;

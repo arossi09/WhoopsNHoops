@@ -8,24 +8,20 @@ in vec3 fragNor;
 in vec2 vTexCoord;
 in vec3 vWorldPosition;
 out vec4 Outcolor;
+
+vec3 applyFog(vec3 col, float t, vec3 ro, vec3 rd) {
+  float a = 0.0025;
+  float b = 0.1;
+  rd = normalize(rd);
+  float rdy = abs(rd.y) < 0.0001 ? 0.0001 : rd.y;
+  float fogAmount = (a / b) * exp(-ro.y * b) * (1.0 - exp(-t * rd.y * b)) / rdy;
+  vec3 fogColor = vec3(0.5, 0.6, 0.7);
+  return mix(col, fogColor, fogAmount);
+}
 void main() {
-  /*
-    float fogDensity = 0.0015;
-    vec3 fogColor = vec3(0.7, 0.7, 0.8);
-    vec3 fogOrigin = cameraPosition;
-    vec3 fogDirection = normalize(vWorldPosition - fogOrigin);
-    float fogDepth = distance(vWorldPosition, fogOrigin);
 
-    float heightFactor = 0.05;
-    float fogFactor = heightFactor * exp(-fogOrigin.y * fogDensity) *
-        (1.0 - exp(-fogDepth * fogDirection.y * fogDensity) / fogDirection.y);
-    fogFactor = clamp(fogFactor, 0.0, 1.0);
-    float fogDensity = 0.0015;
-    float fogFactor = 1.0 - exp(-fogDepth * fogDensity);
-    fogFactor = clamp(fogFactor, 0.0, 1.0);
-  	*/
-
-  vec3 fogColor = vec3(0.7, 0.7, 0.8);
+  vec3 fogColor = vec3(0.5, 0.6, 0.7);
+  //vec3 fogColor = vec3(0.7, 0.7, 0.8);
   float fogDensity = 0.0025;
   vec3 fogOrigin = cameraPosition;
   float fogDepth = distance(vWorldPosition, fogOrigin);
@@ -47,6 +43,11 @@ void main() {
   } else {
     Outcolor = texColor0;
   }
+
+  /*
+    vec3 camera_to_point = normalize(vWorldPosition - cameraPosition);
+    Outcolor = vec4(applyFog(Outcolor.rgb, fogDepth, cameraPosition, camera_to_point), 1.0f);
+  	*/
 
   Outcolor.rgb = mix(Outcolor.rgb, fogColor, fogFactor);
 }

@@ -6,9 +6,9 @@ uniform float g_Time;
 float u_Seed = 4; // Starting seed
 float u_SeedIter = 4.3; // Increment per wave
 float u_Frequency = 1; // Base frequency
-float u_FrequencyMult = 1.19; // Multiplier per iteration
+float u_FrequencyMult = 1.15; // Multiplier per iteration
 float u_Amplitude = 1; // Base amplitude
-float u_AmplitudeMult = 0.85; // Multiplier per iteration
+float u_AmplitudeMult = 0.83; // Multiplier per iteration
 float u_InitialSpeed = 1; // Base speed
 float u_SpeedRamp = 1.0; // Speed multiplier per iteration
 float u_MaxPeak = 1; // For exp function 
@@ -49,7 +49,7 @@ float waveHeight(vec3 pos, out vec3 normal ) {
     totalHeight += wave;
 
     // Derivative for normals
-    float derivativeFactor = u_MaxPeak * wave * cos(theta);
+    float derivativeFactor = f * u_MaxPeak * wave * cos(theta);
     dx += derivativeFactor * dir.x;
     dz += derivativeFactor * dir.y;
 
@@ -69,9 +69,10 @@ float waveHeight(vec3 pos, out vec3 normal ) {
   dx /= amplitudeSum;
   dz /= amplitudeSum;
 
-  vec3 tangent = normalize(vec3(1.0, dx, 0.0));
-  vec3 binormal = normalize(vec3(0.0, dz, 1.0));
-  normal = normalize(cross(binormal, tangent));
+  //vec3 tangent = normalize(vec3(1.0, dx, 0.0));
+  //vec3 binormal = normalize(vec3(0.0, dz, 1.0));
+  //normal = normalize(cross(binormal, tangent));
+	normal = normalize(vec3(-dx, 1.0, -dz));
 
 
   totalHeight *= u_vertexHeight;

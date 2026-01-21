@@ -7,6 +7,7 @@
 #include "Drone.h"
 #include "GLSL.h"
 #include "Hud.h"
+#include "Lipo.h"
 #include "MatrixStack.h"
 #include "OBB.h"
 #include "Physics.h"
@@ -82,8 +83,13 @@ public:
   shared_ptr<Texture> texture1;
   shared_ptr<Texture> texture5;
   shared_ptr<Texture> stylebar_sheet;
+  shared_ptr<Texture> lipo_texture;
   map<char, Character> characters;
   float dt;
+
+  // lipo
+  std::shared_ptr<Lipo> lipo;
+  vector<shared_ptr<Entity>> entities;
 
   // example data that might be useful when trying to compute bounds on
   // multi-shape
@@ -272,6 +278,8 @@ public:
   void init(const std::string &resourceDirectory) {
 
     GLSL::checkVersion();
+    lipo = make_shared<Lipo>(vec3(0, 0, 0), resourceDirectory);
+    entities.push_back(lipo);
 
     // Set background color.
     glClearColor(.72f, .84f, 1.06f, 1.0f);
@@ -361,6 +369,13 @@ public:
     stylebar_sheet->setUnit(1);
     stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
     stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
+
+    lipo_texture = make_shared<Texture>();
+    lipo_texture->setFilename(resourceDirectory + "/1slipo.png");
+    lipo_texture->init();
+    lipo_texture->setUnit(0);
+    lipo_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+    lipo_texture->setFiltering(GL_NEAREST, GL_NEAREST);
 
     // set up the scenes models, textures, and physics
     scene.load(resourceDirectory + "/scenes/scene.json", resourceManager);
@@ -497,37 +512,6 @@ public:
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, GL_STATIC_DRAW);
   }
 
-  /*code to draw the ground plane*/
-  void drawGround(shared_ptr<Program> curS) {
-    curS->bind();
-    glBindVertexArray(GroundVertexArrayID);
-    glUniform1i(curS->getUniform("lightToggle"), 0);
-    texture5->bind(curS->getUniform("Texture0"));
-
-    // draw the ground plane
-    SetModel(vec3(0, -1, 0), 0, 0, 1, curS);
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, GrndBuffObj);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, GrndNorBuffObj);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ARRAY_BUFFER, GrndTexBuffObj);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    // draw!
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GIndxBuffObj);
-    glDrawElements(GL_TRIANGLES, g_GiboLen, GL_UNSIGNED_SHORT, 0);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
-    curS->unbind();
-  }
-
   /* helper function to set model transforms */
   void SetModel(vec3 trans, float rotY, float rotX, float sc,
                 shared_ptr<Program> curS) {
@@ -543,6 +527,33 @@ public:
   void setModel(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> M) {
     glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
                        value_ptr(M->topMatrix()));
+  }
+
+  /*resizes the model into -1 to 1 range and centers at the origin*/
+  void resize_and_center(vec3 gMin, vec3 gMax, shared_ptr<MatrixStack> Model) {
+    float center_x = (gMax.x + gMin.x) / 2;
+    float center_y = (gMax.y + gMin.y) / 2;
+    float center_z = (gMax.z + gMin.z) / 2;
+
+    float largest_extent = std::max(
+        std::max((gMax.x - gMin.x), (gMax.y - gMin.y)), (gMax.z - gMin.z));
+    float scale = 2.0 / largest_extent;
+    Model->translate(vec3(-center_x, -center_y, -center_z));
+    Model->scale(vec3(scale, scale, scale));
+  }
+
+  // we need this to loop through and update entities
+  void update_entities(float dt) {
+    AABB droneAABB = drone.getAABB();
+    for (int i = 0; i < entities.size(); i++) {
+      if (entities[i] && entities[i]->getAABB()) {
+        if (entities[i]->getAABB()->intersects(droneAABB)) {
+          entities[i]->update(dt, drone);
+        }
+      } else {
+        cout << "UPDATE::ENTITIES: AABB is NULL!" << endl;
+      }
+    }
   }
 
   /*function to render the scene, dt is delta time*/
@@ -577,6 +588,8 @@ public:
       drone.updateTrickState(dt);
     }
 
+    update_entities(dt);
+
     // Apply perspective projection.
     Projection->pushMatrix();
     Projection->perspective(glm::radians(75.0f), aspect, 0.01f, 800.0f);
@@ -603,11 +616,11 @@ public:
     skyProg->unbind();
 
     Model->pushMatrix();
-		Model->loadIdentity();
-		Model->translate(vec3(-800, -60, -900));
-		Model->scale(vec3(100, 50, 100));
+    Model->loadIdentity();
+    Model->translate(vec3(-800, -60, -900));
+    Model->scale(vec3(100, 50, 100));
     ocean.render(Model->topMatrix(), View->topMatrix(), Projection->topMatrix(),
-                 drone.position, glm::vec3(0, -0.5f, 1.0f), glfwGetTime());
+                 drone.position, glm::vec3(1.0f, -1.0f, 1.0f), glfwGetTime());
     Model->popMatrix();
 
     // Main scene
@@ -622,6 +635,16 @@ public:
     glUniform1i(texProg->getUniform("flip"), 1);
     glUniform1i(texProg->getUniform("lightToggle"), 1);
 
+    Model->pushMatrix();
+    lipo_texture->bind(texProg->getUniform("Texture0"));
+    Model->translate(vec3(0, sTheta * .5, 5));
+    Model->rotate(glfwGetTime(), vec3(0, 1, 0));
+    Model->scale(vec3(4, 4, 4));
+    resize_and_center(lipo->shape->min, lipo->shape->max, Model);
+    setModel(texProg, Model);
+    lipo->draw(texProg, Model, View, Projection);
+    Model->popMatrix();
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -634,7 +657,6 @@ public:
     physicsWorld.handleDroneCollisions(drone);
     Model->popMatrix();
 
-    //drawGround(texProg);
     texProg->unbind();
 
     /*we need this to restrict drone to worldBox*/
@@ -659,20 +681,34 @@ public:
     } else if (!goCamera && hud_flag) {
       // main hud
       int speed = static_cast<int>(length(drone.velocity));
+
+      // render information in bottom left
       Text::RenderText(textProg, string("SPEED: " + to_string(speed)), 25.0f,
                        25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
       Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f,
                        glm::vec3(0.5, 0.8f, 0.2f), characters);
+      Text::RenderText(
+          textProg,
+          string("BAT: " + to_string(static_cast<int>(drone.battery))), 25.0f,
+          125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
-      Text::RenderText(textProg, to_string(drone.score), 370.0f, 70.0f, .8f,
-                       glm::vec3(1, 1, 1), characters);
-      Text::RenderText(textProg, to_string(drone.score), 365.0f, 65.0f, .8f,
-                       glm::vec3(0, 0, 0), characters);
 
-      Text::RenderText(textProg, drone.trick, 380, 50.0f, .5f,
-                       glm::vec3(1, 1, 0), characters, 500, true);
-      Text::RenderText(textProg, drone.trick, 378, 45.0f, .5f,
+
+      // render score
+      if (drone.trickCount > 0) {
+        Text::RenderText(textProg,
+                         string(to_string(drone.score) + " x " +
+                                to_string(drone.trickCount)),
+                         340.0f, 70.0f, .8f, glm::vec3(1, 1, 1), characters);
+      }
+
+
+      Text::RenderText(textProg, string("Score: " + to_string(drone.totalScore)), 255.0f, 550.0f, .5f,
                        glm::vec3(0, 0, 0), characters, 500, true);
+
+      // render drone trick description
+      Text::RenderText(textProg, drone.trick, 400.0f, 50.0f, .5f,
+                       glm::vec3(1, 1, 0), characters, 500, true);
     }
     if (!gamepad_connected) {
       // gamepad disconnnected
