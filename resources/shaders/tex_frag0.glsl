@@ -36,18 +36,13 @@ void main() {
   //to set the out color as the texture color
   if (lightToggle == 1) {
     if (dC > .5) {
-      Outcolor = vec4(texColor0.rgb * .9f, texColor0.a);
+      Outcolor = vec4(texColor0.rgb * .8f, texColor0.a);
     } else {
-      Outcolor = vec4(texColor0.rgb * .5f, texColor0.a);
+      Outcolor = vec4(texColor0.rgb * .45f, texColor0.a);
     }
   } else {
     Outcolor = texColor0;
   }
-
-  /*
-    vec3 camera_to_point = normalize(vWorldPosition - cameraPosition);
-    Outcolor = vec4(applyFog(Outcolor.rgb, fogDepth, cameraPosition, camera_to_point), 1.0f);
-  	*/
 
   Outcolor.rgb = mix(Outcolor.rgb, fogColor, fogFactor);
 }

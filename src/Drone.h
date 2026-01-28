@@ -9,8 +9,8 @@
 
 using namespace glm;
 
-#define DECAY_RATE .01
-#define THROTTLE_FACTOR .5
+#define DECAY_RATE .03
+#define THROTTLE_FACTOR .8
 
 template <typename T>
 std::string join(const std::vector<T> &arr, const std::string &delimiter) {
@@ -46,10 +46,17 @@ struct Drone {
 
   std::string trick = "";
   int score = 0;
-	int totalScore = 0;
+  int totalScore = 0;
   bool special_mode = false;
   float special_score_thresh = 3000.0f;
   int trickCount = 0;
+	//final stats
+	int obstaclesHit = 0;
+	int finalScore = 0;
+	int batteriesCollected = 0;
+	int totalCombos = 0;
+	int highestCombo = 0;
+
 
   // prob move this to another struct
   float rollInput = 0.0f;
@@ -67,6 +74,46 @@ struct Drone {
   AABB getAABB() const {
     float halfSize = .7f;
     return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
+  }
+
+	int getObstaclesHit(){
+		return obstaclesHit;
+	}
+
+	void setObstaclesHit(int num){
+		obstaclesHit = num;
+	}
+
+
+  void getPosition() {
+    std::cout << "Drone Position: " << "x: " << position.x
+              << " y: " << position.y << " z: " << position.z << '\n';
+  }
+
+  void chargeBattery() { battery = 100.0f; }
+
+
+	//we need this to reset the state of the drone
+	//on gameovers
+	void reset(){
+		obstaclesHit = 0;
+		finalScore = 0;
+		batteriesCollected = 0;
+		totalCombos = 0;
+		highestCombo = 0;
+		totalScore = 0.0f;
+    position = glm::vec3(0.0f);
+    acceleration = glm::vec3(0.0f);
+    velocity = glm::vec3(0.0f);
+    trickManager.reset();
+	}
+
+  void endCombo() {
+		highestCombo = max(score, highestCombo);
+    totalScore += score;
+		finalScore = totalScore;
+		totalCombos += 1;
+    trickManager.reset();
   }
 
   // calculate drone physics
@@ -94,6 +141,7 @@ struct Drone {
       velocity = normalize(velocity) * maxVelocity;
     }
   }
+
 
   void updateTrickState(float dt) {
     // we need to calculate the delta angles for pitch, yaw, and
@@ -125,10 +173,7 @@ struct Drone {
     prevorientation = orientation;
   }
 
-  void resetScore() {
-    totalScore += score;
-    trickManager.reset();
-  }
+
 
   // we need this to be able to update the drones orientation based
   // off the inputs from the controller

@@ -1,10 +1,13 @@
 // TODO fix in scene wher colliders are hard coded move by parent offset
+// poitners to A timer must be introduced that spawns them after one is
+// colelectd
 #include <chrono>
 #include <glad/glad.h>
 #include <iostream>
 
 #include "AABB.h"
 #include "Drone.h"
+#include "EntityProcess.h"
 #include "GLSL.h"
 #include "Hud.h"
 #include "Lipo.h"
@@ -23,7 +26,7 @@
 #include "ocean.h"
 #include "skybox.h"
 
-#define PI 3.14
+#define PI 3.1415926535
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
@@ -58,7 +61,6 @@ public:
   PhysicsWorld physicsWorld;
 
   WindowManager *windowManager = nullptr;
-
   // render class
   // Our shader program
   std::shared_ptr<Program> textProg;
@@ -89,7 +91,8 @@ public:
 
   // lipo
   std::shared_ptr<Lipo> lipo;
-  vector<shared_ptr<Entity>> entities;
+  // vector<shared_ptr<Entity>> entities;
+  EntityProcess entityProcess;
 
   // example data that might be useful when trying to compute bounds on
   // multi-shape
@@ -122,8 +125,8 @@ public:
   bool debugCam = false;
   bool hud_flag = true;
 
-  vector<shared_ptr<AABB>> draw_boxes;
   bool goCamera = true;
+  bool gameOverFlag = false;
 
   Spline splinepath[3];
   int currentSpline = 0;
@@ -160,6 +163,13 @@ public:
       debugCam = !debugCam;
     }
 
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+			if(gameOverFlag){
+				std::cout << "Restarting the game" <<std::endl;
+				restartGame();
+			}
+    }
+
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
       hud_flag = !hud_flag;
     }
@@ -174,7 +184,7 @@ public:
 
   void mouseCallback(GLFWwindow *window, int button, int action, int mods) {
     double posX, posY;
-
+    drone.getPosition();
     glfwGetCursorPos(window, &posX, &posY);
     cout << "Pos X " << posX << " Pos Y " << posY << endl;
   }
@@ -233,7 +243,7 @@ public:
   }
 
   void updateUsingCameraPath(float frametime) {
-    if (goCamera) {
+    if (goCamera || gameOverFlag) {
       if (!splinepath[currentSpline].isDone()) {
         splinepath[currentSpline].update(frametime);
         gPos = splinepath[currentSpline].getPosition();
@@ -262,7 +272,7 @@ public:
     vec3 forward = cameraOrientation * vec3(0.0f, 0.0f, -1.0f);
     vec3 up = cameraOrientation * vec3(0.0f, 1.0f, 0.0f);
     // to where camera is
-    if (goCamera) {
+    if (goCamera || gameOverFlag) {
       view->lookAt(gPos, gCenter, vec3(0, 1, 0));
     } else {
       view->lookAt(eye, eye + forward, up);
@@ -278,8 +288,9 @@ public:
   void init(const std::string &resourceDirectory) {
 
     GLSL::checkVersion();
-    lipo = make_shared<Lipo>(vec3(0, 0, 0), resourceDirectory);
-    entities.push_back(lipo);
+    lipo = make_shared<Lipo>(vec3(0, 1, 0), resourceDirectory);
+    entityProcess.add(lipo);
+    // entities.push_back(lipo);
 
     // Set background color.
     glClearColor(.72f, .84f, 1.06f, 1.0f);
@@ -467,60 +478,6 @@ public:
       skyscraper->init();
     }
 
-    // code to load in the ground plane (CPU defined data passed to GPU)
-    initGround();
-  }
-
-  /*initlized cpu generated ground*/
-  void initGround() {
-
-    float g_groundSize = 600;
-    float g_groundY = -20;
-
-    // A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
-    float GrndPos[] = {-g_groundSize, g_groundY + sTheta * 2, -g_groundSize,
-                       -g_groundSize, g_groundY + cTheta * 2, g_groundSize,
-                       g_groundSize,  g_groundY + sTheta * 2, g_groundSize,
-                       g_groundSize,  g_groundY + cTheta * 2, -g_groundSize};
-
-    float GrndNorm[] = {0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
-
-    static GLfloat GrndTex[] = {0, 0, // back
-                                0, 1, 1, 1, 1, 0};
-
-    unsigned short idx[] = {0, 1, 2, 0, 2, 3};
-
-    // generate the ground VAO
-    glGenVertexArrays(1, &GroundVertexArrayID);
-    glBindVertexArray(GroundVertexArrayID);
-
-    g_GiboLen = 6;
-    glGenBuffers(1, &GrndBuffObj);
-    glBindBuffer(GL_ARRAY_BUFFER, GrndBuffObj);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GrndPos), GrndPos, GL_STATIC_DRAW);
-
-    glGenBuffers(1, &GrndNorBuffObj);
-    glBindBuffer(GL_ARRAY_BUFFER, GrndNorBuffObj);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GrndNorm), GrndNorm, GL_STATIC_DRAW);
-
-    glGenBuffers(1, &GrndTexBuffObj);
-    glBindBuffer(GL_ARRAY_BUFFER, GrndTexBuffObj);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GrndTex), GrndTex, GL_STATIC_DRAW);
-
-    glGenBuffers(1, &GIndxBuffObj);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GIndxBuffObj);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, GL_STATIC_DRAW);
-  }
-
-  /* helper function to set model transforms */
-  void SetModel(vec3 trans, float rotY, float rotX, float sc,
-                shared_ptr<Program> curS) {
-    mat4 Trans = glm::translate(glm::mat4(1.0f), trans);
-    mat4 RotX = glm::rotate(glm::mat4(1.0f), rotX, vec3(1, 0, 0));
-    mat4 RotY = glm::rotate(glm::mat4(1.0f), rotY, vec3(0, 1, 0));
-    mat4 ScaleS = glm::scale(glm::mat4(1.0f), vec3(sc));
-    mat4 ctm = Trans * RotX * RotY * ScaleS;
-    glUniformMatrix4fv(curS->getUniform("M"), 1, GL_FALSE, value_ptr(ctm));
   }
 
   /*sets the program passed model uniform to the MatrixStack passed*/
@@ -542,31 +499,17 @@ public:
     Model->scale(vec3(scale, scale, scale));
   }
 
-  // we need this to loop through and update entities
-  void update_entities(float dt) {
-    AABB droneAABB = drone.getAABB();
-    for (int i = 0; i < entities.size(); i++) {
-      if (entities[i] && entities[i]->getAABB()) {
-        if (entities[i]->getAABB()->intersects(droneAABB)) {
-          entities[i]->update(dt, drone);
-        }
-      } else {
-        cout << "UPDATE::ENTITIES: AABB is NULL!" << endl;
-      }
-    }
-  }
-
   /*function to render the scene, dt is delta time*/
   void render() {
     // Get current frame buffer size.
     int width, height;
-    initGround();
     glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
     glViewport(0, 0, width, height);
 
     // Clear framebuffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     float aspect = width / (float)height;
+
     // Create the matrix stacks
     auto Projection = make_shared<MatrixStack>();
     auto View = make_shared<MatrixStack>();
@@ -577,9 +520,12 @@ public:
     float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
     float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
 
-    if (goCamera) {
+		//Update Camera Based on Flags
+    if (goCamera) { 
       updateUsingCameraPath(dt);
 
+    } else if (gameOverFlag) {
+      updateUsingCameraPath(dt);
     } else {
       if (!debugCam) {
         drone.updatePosition(dt);
@@ -588,7 +534,6 @@ public:
       drone.updateTrickState(dt);
     }
 
-    update_entities(dt);
 
     // Apply perspective projection.
     Projection->pushMatrix();
@@ -603,7 +548,6 @@ public:
 
     // draw skybox
     skyProg->bind();
-
     glDepthFunc(GL_LEQUAL);
     glUniformMatrix4fv(skyProg->getUniform("P"), 1, GL_FALSE,
                        value_ptr(Projection->topMatrix()));
@@ -615,6 +559,7 @@ public:
     glDepthFunc(GL_LESS);
     skyProg->unbind();
 
+    // draw the ocean
     Model->pushMatrix();
     Model->loadIdentity();
     Model->translate(vec3(-800, -60, -900));
@@ -634,33 +579,24 @@ public:
                  value_ptr(drone.position));
     glUniform1i(texProg->getUniform("flip"), 1);
     glUniform1i(texProg->getUniform("lightToggle"), 1);
-
-    Model->pushMatrix();
-    lipo_texture->bind(texProg->getUniform("Texture0"));
-    Model->translate(vec3(0, sTheta * .5, 5));
-    Model->rotate(glfwGetTime(), vec3(0, 1, 0));
-    Model->scale(vec3(4, 4, 4));
-    resize_and_center(lipo->shape->min, lipo->shape->max, Model);
-    setModel(texProg, Model);
-    lipo->draw(texProg, Model, View, Projection);
-    Model->popMatrix();
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     Model->pushMatrix();
-    Model->translate(vec3(0, 2, 0));
-    Model->scale(vec3(4, 4, 4));
-    // draw the scene
-    scene.draw(texProg, Model->topMatrix());
-    // handle the drone collisions among all colliders
-    physicsWorld.handleDroneCollisions(drone);
-    Model->popMatrix();
-
+			Model->translate(vec3(0, 2, 0));
+			Model->scale(vec3(4, 4, 4));
+			// draw the scene
+			scene.draw(texProg, Model->topMatrix());
+			// draw the entities
+			entityProcess.draw(texProg, Model);
+			entityProcess.update(dt, drone); // TODO move this somewhere else
+			// handle the drone collisions among all colliders
+			physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
+		Model->popMatrix();
     texProg->unbind();
-
     /*we need this to restrict drone to worldBox*/
     Physics::clampToWorld(worldBox, drone);
+
 
     /*all of the text*/
     textProg->bind();
@@ -672,13 +608,32 @@ public:
       Text::RenderText(textProg, "debug cam", 650, 550, .5, glm::vec3(1, 1, 1),
                        characters);
     }
+		if(gameOverFlag){
+      Text::RenderText(textProg, string("Final Stats:"), 100, 550, .8f,
+                       glm::vec3(1, 1, 1), characters);
+      Text::RenderText(textProg, string("Score................." + to_string(drone.finalScore)), 150, 500, .8f,
+                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, string("Time Alive............" + to_string(0)), 150, 450, .8f,
+                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, string("Total Combos.........." + to_string(drone.totalCombos)), 150, 400, .8f,
+                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, string("Highest Combo........." + to_string(drone.highestCombo)), 150, 350, .8f,
+                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, string("Batteries Collected..." + to_string(drone.batteriesCollected)), 150, 300, .8f,
+                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg, string("Obstacles Hit........." + to_string(drone.obstaclesHit)), 150, 250, .8f,
+                       glm::vec3(1, 1, 0), characters);
+
+      Text::RenderText(textProg, "PRESS R TO TRY AGAIN", 400, 175, .1 * sTheta + .7,
+                       glm::vec3(0, 1, 0), characters, 500, true);
+		}
     if (goCamera) {
       // main menu
-      Text::RenderText(textProg, "WHOOPS AND HOOPS", 100, 500, .1 * sTheta + 1,
-                       glm::vec3(1, 1, 1), characters);
+      Text::RenderText(textProg, "WHOOPS AND HOOPS", 300, 500, .1 * sTheta + 1,
+                       glm::vec3(1, 1, 1), characters, 500, true);
       Text::RenderText(textProg, "Press G to start", 250, 100, .7,
                        glm::vec3(0, 1, 0), characters);
-    } else if (!goCamera && hud_flag) {
+    } else if (!goCamera && !gameOverFlag && hud_flag) {
       // main hud
       int speed = static_cast<int>(length(drone.velocity));
 
@@ -692,8 +647,6 @@ public:
           string("BAT: " + to_string(static_cast<int>(drone.battery))), 25.0f,
           125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
-
-
       // render score
       if (drone.trickCount > 0) {
         Text::RenderText(textProg,
@@ -702,9 +655,9 @@ public:
                          340.0f, 70.0f, .8f, glm::vec3(1, 1, 1), characters);
       }
 
-
-      Text::RenderText(textProg, string("Score: " + to_string(drone.totalScore)), 255.0f, 550.0f, .5f,
-                       glm::vec3(0, 0, 0), characters, 500, true);
+      Text::RenderText(textProg,
+                       string("Score: " + to_string(drone.totalScore)), 255.0f,
+                       550.0f, .5f, glm::vec3(0, 0, 0), characters, 500, true);
 
       // render drone trick description
       Text::RenderText(textProg, drone.trick, 400.0f, 50.0f, .5f,
@@ -721,7 +674,7 @@ public:
     glDisable(GL_BLEND);
 
     // draw and update hud
-    if (!goCamera) {
+    if (!goCamera && !gameOverFlag) {
       float fill = drone.score / drone.special_score_thresh - dt;
       hud.setTargetFill(fill);
       hud.update(dt);
@@ -733,7 +686,7 @@ public:
     glClear(GL_DEPTH_BUFFER_BIT);
 
     // draw the drone
-    if (!goCamera) {
+    if (!goCamera && !gameOverFlag) {
       solidProg->bind();
       glUniformMatrix4fv(solidProg->getUniform("P"), 1, GL_FALSE,
                          value_ptr(Projection->topMatrix()));
@@ -914,6 +867,19 @@ public:
     View->popMatrix();
   }
 
+  void gameOver() {
+		drone.chargeBattery();
+		drone.endCombo();
+		gameOverFlag = true;
+	}
+
+	//we need this to restart the game after user
+	//gets gameOver screen
+	void restartGame(){
+		drone.reset();
+		gameOverFlag = false;
+	}
+
   void processKeyInput(GLFWwindow *window) {
     if (debugCam) {
       vec3 up = drone.orientation * vec3(0, 1, 0);
@@ -963,6 +929,10 @@ int main(int argc, char *argv[]) {
   // Loop until the user closes the window.
   while (!glfwWindowShouldClose(windowManager->getHandle())) {
     application->calculateDeltaTime();
+
+    if (application->drone.battery <= 0) {
+      application->gameOver();
+    }
     // Render scene.
     application->render();
     application->processKeyInput(
