@@ -84,6 +84,14 @@ struct Drone {
 		obstaclesHit = num;
 	}
 
+	int getBatteriesCollected(){
+		return batteriesCollected;
+	}
+
+	void setBatteriesCollected(int num){
+		batteriesCollected = num;
+	}
+
 
   void getPosition() {
     std::cout << "Drone Position: " << "x: " << position.x
@@ -109,11 +117,14 @@ struct Drone {
 	}
 
   void endCombo() {
-		highestCombo = max(score, highestCombo);
-    totalScore += score;
-		finalScore = totalScore;
-		totalCombos += 1;
-    trickManager.reset();
+		if(score > 0){
+			score = 0;
+			highestCombo = max(score, highestCombo);
+			totalScore += score;
+			finalScore = totalScore;
+			totalCombos += 1;
+			trickManager.reset();
+		}
   }
 
   // calculate drone physics

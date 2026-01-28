@@ -91,6 +91,7 @@ public:
 
   // lipo
   std::shared_ptr<Lipo> lipo;
+  std::shared_ptr<Lipo> lipo2;
   // vector<shared_ptr<Entity>> entities;
   EntityProcess entityProcess;
 
@@ -164,10 +165,10 @@ public:
     }
 
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-			if(gameOverFlag){
-				std::cout << "Restarting the game" <<std::endl;
-				restartGame();
-			}
+      if (gameOverFlag) {
+        std::cout << "Restarting the game" << std::endl;
+        restartGame();
+      }
     }
 
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
@@ -288,7 +289,7 @@ public:
   void init(const std::string &resourceDirectory) {
 
     GLSL::checkVersion();
-    lipo = make_shared<Lipo>(vec3(0, 1, 0), resourceDirectory);
+    lipo = make_shared<Lipo>(resourceDirectory);
     entityProcess.add(lipo);
     // entities.push_back(lipo);
 
@@ -477,7 +478,6 @@ public:
       skyscraper->measure();
       skyscraper->init();
     }
-
   }
 
   /*sets the program passed model uniform to the MatrixStack passed*/
@@ -520,8 +520,8 @@ public:
     float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
     float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
 
-		//Update Camera Based on Flags
-    if (goCamera) { 
+    // Update Camera Based on Flags
+    if (goCamera) {
       updateUsingCameraPath(dt);
 
     } else if (gameOverFlag) {
@@ -533,7 +533,6 @@ public:
       drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
       drone.updateTrickState(dt);
     }
-
 
     // Apply perspective projection.
     Projection->pushMatrix();
@@ -583,20 +582,19 @@ public:
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     Model->pushMatrix();
-			Model->translate(vec3(0, 2, 0));
-			Model->scale(vec3(4, 4, 4));
-			// draw the scene
-			scene.draw(texProg, Model->topMatrix());
-			// draw the entities
-			entityProcess.draw(texProg, Model);
-			entityProcess.update(dt, drone); // TODO move this somewhere else
-			// handle the drone collisions among all colliders
-			physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
-		Model->popMatrix();
+    Model->translate(vec3(0, 2, 0));
+    Model->scale(vec3(4, 4, 4));
+    // draw the scene
+    scene.draw(texProg, Model->topMatrix());
+    // draw the entities
+    entityProcess.draw(texProg, Model);
+    entityProcess.update(dt, drone); // TODO move this somewhere else
+    // handle the drone collisions among all colliders
+    physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
+    Model->popMatrix();
     texProg->unbind();
     /*we need this to restrict drone to worldBox*/
     Physics::clampToWorld(worldBox, drone);
-
 
     /*all of the text*/
     textProg->bind();
@@ -608,25 +606,37 @@ public:
       Text::RenderText(textProg, "debug cam", 650, 550, .5, glm::vec3(1, 1, 1),
                        characters);
     }
-		if(gameOverFlag){
+    if (gameOverFlag) {
       Text::RenderText(textProg, string("Final Stats:"), 100, 550, .8f,
                        glm::vec3(1, 1, 1), characters);
-      Text::RenderText(textProg, string("Score................." + to_string(drone.finalScore)), 150, 500, .8f,
-                       glm::vec3(1, 1, 0), characters);
-      Text::RenderText(textProg, string("Time Alive............" + to_string(0)), 150, 450, .8f,
-                       glm::vec3(1, 1, 0), characters);
-      Text::RenderText(textProg, string("Total Combos.........." + to_string(drone.totalCombos)), 150, 400, .8f,
-                       glm::vec3(1, 1, 0), characters);
-      Text::RenderText(textProg, string("Highest Combo........." + to_string(drone.highestCombo)), 150, 350, .8f,
-                       glm::vec3(1, 1, 0), characters);
-      Text::RenderText(textProg, string("Batteries Collected..." + to_string(drone.batteriesCollected)), 150, 300, .8f,
-                       glm::vec3(1, 1, 0), characters);
-      Text::RenderText(textProg, string("Obstacles Hit........." + to_string(drone.obstaclesHit)), 150, 250, .8f,
-                       glm::vec3(1, 1, 0), characters);
+      Text::RenderText(
+          textProg,
+          string("Score................." + to_string(drone.finalScore)), 150,
+          500, .8f, glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg,
+                       string("Time Alive............" + to_string(0)), 150,
+                       450, .8f, glm::vec3(1, 1, 0), characters);
+      Text::RenderText(
+          textProg,
+          string("Total Combos.........." + to_string(drone.totalCombos)), 150,
+          400, .8f, glm::vec3(1, 1, 0), characters);
+      Text::RenderText(
+          textProg,
+          string("Highest Combo........." + to_string(drone.highestCombo)), 150,
+          350, .8f, glm::vec3(1, 1, 0), characters);
+      Text::RenderText(textProg,
+                       string("Batteries Collected..." +
+                              to_string(drone.batteriesCollected)),
+                       150, 300, .8f, glm::vec3(1, 1, 0), characters);
+      Text::RenderText(
+          textProg,
+          string("Obstacles Hit........." + to_string(drone.obstaclesHit)), 150,
+          250, .8f, glm::vec3(1, 1, 0), characters);
 
-      Text::RenderText(textProg, "PRESS R TO TRY AGAIN", 400, 175, .1 * sTheta + .7,
-                       glm::vec3(0, 1, 0), characters, 500, true);
-		}
+      Text::RenderText(textProg, "PRESS R TO TRY AGAIN", 400, 175,
+                       .1 * sTheta + .7, glm::vec3(0, 1, 0), characters, 500,
+                       true);
+    }
     if (goCamera) {
       // main menu
       Text::RenderText(textProg, "WHOOPS AND HOOPS", 300, 500, .1 * sTheta + 1,
@@ -868,17 +878,17 @@ public:
   }
 
   void gameOver() {
-		drone.chargeBattery();
-		drone.endCombo();
-		gameOverFlag = true;
-	}
+    drone.chargeBattery();
+    drone.endCombo();
+    gameOverFlag = true;
+  }
 
-	//we need this to restart the game after user
-	//gets gameOver screen
-	void restartGame(){
-		drone.reset();
-		gameOverFlag = false;
-	}
+  // we need this to restart the game after user
+  // gets gameOver screen
+  void restartGame() {
+    drone.reset();
+    gameOverFlag = false;
+  }
 
   void processKeyInput(GLFWwindow *window) {
     if (debugCam) {

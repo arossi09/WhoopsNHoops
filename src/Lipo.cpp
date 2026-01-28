@@ -4,9 +4,9 @@
 #include <cstdlib>
 #include <iostream>
 
-Lipo::Lipo(glm::vec3 pos, const std::string resourceDirectory) {
+Lipo::Lipo(const std::string &resourceDirectory) {
   // set defualt position
-  position = pos;
+	newRandPosition();
   // initilize the lipo texture for loading later
   lipo_texture = std::make_shared<Texture>();
   lipo_texture->setFilename(resourceDirectory + "/1slipo.png");
@@ -103,7 +103,7 @@ void Lipo::draw(std::shared_ptr<Program> prog,
 void Lipo::update(float dt, Drone &drone) {
   // charge drone battery;
   drone.battery += 25.0f;
-	drone.batteriesCollected = drone.batteriesCollected++;
+	drone.setBatteriesCollected(drone.getBatteriesCollected()+1);
   newRandPosition();
   return;
 }
