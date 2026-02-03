@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "AABB.h"
+#include "Bonus.h"
 #include "Drone.h"
 #include "EntityProcess.h"
 #include "GLSL.h"
@@ -90,8 +91,13 @@ public:
   float dt;
 
   // lipo
-  std::shared_ptr<Lipo> lipo;
+  std::shared_ptr<Lipo> lipo1;
   std::shared_ptr<Lipo> lipo2;
+  std::shared_ptr<Lipo> lipo3;
+	// Bonus
+  std::shared_ptr<Bonus> bonus1;
+  std::shared_ptr<Bonus> bonus2;
+  std::shared_ptr<Bonus> bonus3;
   // vector<shared_ptr<Entity>> entities;
   EntityProcess entityProcess;
 
@@ -123,6 +129,8 @@ public:
   float cTheta = 0;
   float eTheta = 0;
   float hTheta = 0;
+	float textFallY = 0.0f;
+	float fallSpeed = 30.0f;
   bool debugCam = false;
   bool hud_flag = true;
 
@@ -289,9 +297,18 @@ public:
   void init(const std::string &resourceDirectory) {
 
     GLSL::checkVersion();
-    lipo = make_shared<Lipo>(resourceDirectory);
-    entityProcess.add(lipo);
-    // entities.push_back(lipo);
+    lipo1 = make_shared<Lipo>(resourceDirectory);
+		lipo2 = make_shared<Lipo>(resourceDirectory);
+		lipo3 = make_shared<Lipo>(resourceDirectory);
+		bonus1 = make_shared<Bonus>(resourceDirectory);
+		bonus2 = make_shared<Bonus>(resourceDirectory);
+		bonus3 = make_shared<Bonus>(resourceDirectory);
+    entityProcess.add(lipo1);
+    entityProcess.add(lipo2);
+    entityProcess.add(lipo3);
+    entityProcess.add(bonus1);
+    entityProcess.add(bonus2);
+    entityProcess.add(bonus3);
 
     // Set background color.
     glClearColor(.72f, .84f, 1.06f, 1.0f);
@@ -587,7 +604,7 @@ public:
     // draw the scene
     scene.draw(texProg, Model->topMatrix());
     // draw the entities
-    entityProcess.draw(texProg, Model);
+    entityProcess.draw(texProg, Model, drone);
     entityProcess.update(dt, drone); // TODO move this somewhere else
     // handle the drone collisions among all colliders
     physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
@@ -659,11 +676,21 @@ public:
 
       // render score
       if (drone.trickCount > 0) {
+				textFallY = 0.0;
         Text::RenderText(textProg,
                          string(to_string(drone.score) + " x " +
                                 to_string(drone.trickCount)),
                          340.0f, 70.0f, .8f, glm::vec3(1, 1, 1), characters);
-      }
+      } else if (drone.oldTrick != ""){
+				textFallY += fallSpeed * dt;
+        Text::RenderText(textProg,
+                         string(to_string(drone.oldScore) + " x " +
+                                to_string(drone.trickCount)),
+                         340.0f, 70.0f - textFallY, .8f, glm::vec3(1, 0, 0), characters);
+      // render drone trick description
+      Text::RenderText(textProg, drone.oldTrick, 400.0f, 50.0f-textFallY, .5f,
+                       glm::vec3(1, 0, 0), characters, 500, true);
+			}
 
       Text::RenderText(textProg,
                        string("Score: " + to_string(drone.totalScore)), 255.0f,

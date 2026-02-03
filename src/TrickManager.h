@@ -8,58 +8,61 @@ public:
   std::vector<std::string> trickArray;
   float score = 0.0f;
   float timeSinceLastTrick = 0.f;
-	int trickCount = 0;
-	int scoreMultipler = 1;
+  int trickCount = 0;
+  int scoreMultipler = 1;
 
   TrickStateMachine splitSFSM{TrickType::SplitS};
   TrickStateMachine rollFSM{TrickType::Roll};
   TrickStateMachine flipFSM{TrickType::Flip};
 
-	void incrementMultipler(){
-		scoreMultipler++;
-		score *= scoreMultipler;
-	}
+  void incrementMultipler() {
+    scoreMultipler++;
+    score *= scoreMultipler;
+  }
 
-	//src/TrickManager
+  void addBonus() {
+    score += 100.0f;
+    trickArray.push_back("BONUS");
+  }
+
+  // src/TrickManager
   void update(float dPitch, float dRoll, float dYaw, const glm::vec3 &up,
               float dt, float maxTrickTime) {
 
     timeSinceLastTrick += dt;
-		if(trickArray.size() > 10)
-			trickArray.clear();
+    if (trickArray.size() > 10)
+      trickArray.erase(trickArray.begin());
 
     if (splitSFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("splitS");
       score += 500;
-			trickCount++;
+      trickCount++;
       resetTrickTimer();
-			return;
+      return;
     }
 
     if (rollFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("roll");
       score += 150;
-			trickCount++;
+      trickCount++;
       resetTrickTimer();
-			return;
+      return;
     }
 
-		if(flipFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)){
+    if (flipFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("flip");
       score += 150;
-			trickCount++;
+      trickCount++;
       resetTrickTimer();
-			return;
-		}
+      return;
+    }
 
-    if (timeSinceLastTrick > 8.0f) {
+    if (timeSinceLastTrick > 13.0f) {
       resetAll();
     }
   }
 
-	void reset(){
-		resetAll();
-	}
+  void reset() { resetAll(); }
 
 private:
   void resetTrickTimer() { timeSinceLastTrick = 0.0f; }
@@ -67,7 +70,7 @@ private:
     timeSinceLastTrick = 0.0f;
     trickArray.clear();
     score = 0.0f;
-		trickCount = 0;
-		//scoreMultipler= 1;
+    trickCount = 0;
+    // scoreMultipler= 1;
   }
 };

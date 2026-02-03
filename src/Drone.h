@@ -45,10 +45,13 @@ struct Drone {
   glm::vec3 droneColor = light_blue;
 
   std::string trick = "";
+	std::string oldTrick = "";
   int score = 0;
+	int oldScore = 0;
+	int oldTrickCount = 0;
   int totalScore = 0;
   bool special_mode = false;
-  float special_score_thresh = 3000.0f;
+  float special_score_thresh = 2000.0f;
   int trickCount = 0;
 	//final stats
 	int obstaclesHit = 0;
@@ -100,6 +103,10 @@ struct Drone {
 
   void chargeBattery() { battery = 100.0f; }
 
+	void scoreBonus(){
+		trickManager.addBonus();
+	}
+
 
 	//we need this to reset the state of the drone
 	//on gameovers
@@ -109,6 +116,9 @@ struct Drone {
 		batteriesCollected = 0;
 		totalCombos = 0;
 		highestCombo = 0;
+		oldScore = 0;
+		oldTrick = "";
+		oldTrickCount = 0;
 		totalScore = 0.0f;
     position = glm::vec3(0.0f);
     acceleration = glm::vec3(0.0f);
@@ -118,11 +128,14 @@ struct Drone {
 
   void endCombo() {
 		if(score > 0){
-			score = 0;
 			highestCombo = max(score, highestCombo);
 			totalScore += score;
 			finalScore = totalScore;
 			totalCombos += 1;
+			oldScore = score;
+			oldTrick = trick;
+			oldTrickCount = trickCount;
+			score = 0;
 			trickManager.reset();
 		}
   }

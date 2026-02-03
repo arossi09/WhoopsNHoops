@@ -7,11 +7,10 @@ public:
   std::vector<std::shared_ptr<Entity>> entities;
 
   // we need to loop through entites and draw them
-  void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model) {
-		//std::cout << "EntityProcess: Drawing the Entities" << '\n';
+  void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model, Drone &drone) {
     for (auto const &ent : entities) {
-			//std::cout << "Drawing Entity" << '\n';
-      ent->draw(prog, Model);
+			
+      ent->draw(prog, Model, drone);
     }
   }
 
@@ -30,5 +29,7 @@ public:
         std::cout << "UPDATE::ENTITIES: AABB is NULL!" << std::endl;
       }
     }
+
+		//TODO add loop to check if battery needs respawn..
   }
 };

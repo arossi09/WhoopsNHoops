@@ -1,4 +1,19 @@
 #version 330 core
+/*
+struct PointLight {
+  vec3 position;
+
+  float constant;
+  float linear;
+  float quadratic;
+
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+}
+#define NR_POINT_LIGHTS 4
+uniform PointLight pointLights[NR_POINT_LIGHTS];
+*/
 uniform sampler2D Texture0;
 uniform int lightToggle;
 uniform vec3 lightDirection;
@@ -19,7 +34,6 @@ vec3 applyFog(vec3 col, float t, vec3 ro, vec3 rd) {
   return mix(col, fogColor, fogAmount);
 }
 void main() {
-
   vec3 fogColor = vec3(0.5, 0.6, 0.7);
   //vec3 fogColor = vec3(0.7, 0.7, 0.8);
   float fogDensity = 0.0025;
@@ -46,3 +60,20 @@ void main() {
 
   Outcolor.rgb = mix(Outcolor.rgb, fogColor, fogFactor);
 }
+
+/*
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
+  vec3 lightDir = normalize(light.position - fragPos);
+  //diffuse shading
+  float diff = max(dot(normal, lightDir), 0.0);
+  //specular shading
+  vec3 reflectDir = reflect(-lightDir, normal);
+  float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0f);
+  //attentuation
+  float distance = length(light.position - fragPos);
+  float attentuation = 1.0 / (light.constant + light.linear * distance +
+        light.quadratic * (distanct * distance));
+
+	//combine results
+
+}*/
