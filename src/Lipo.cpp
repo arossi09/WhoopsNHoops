@@ -6,7 +6,7 @@
 
 Lipo::Lipo(const std::string &resourceDirectory) {
   // set defualt position
-	newRandPosition();
+  newRandPosition();
   // initilize the lipo texture for loading later
   lipo_texture = std::make_shared<Texture>();
   lipo_texture->setFilename(resourceDirectory + "/1slipo.png");
@@ -31,20 +31,6 @@ Lipo::Lipo(const std::string &resourceDirectory) {
   }
   // create AABB
   lipo_AABB = std::make_shared<AABB>(shape->min, shape->max);
-
-  // initlize the background prog
-  shadowProg = std::make_shared<Program>();
-  shadowProg->setVerbose(true);
-  shadowProg->setShaderNames(
-      resourceDirectory + "/shaders/lipo_shadow_vert.glsl",
-      resourceDirectory + "/shaders/lipo_shadow_frag.glsl");
-  shadowProg->init();
-  shadowProg->addUniform("M");
-  shadowProg->addUniform("V");
-  shadowProg->addUniform("P");
-  shadowProg->addAttribute("vertPos");
-  shadowProg->addAttribute("vertTex");
-  shadowProg->addAttribute("vertNor");
 }
 
 // we need this to draw and transform the AABB
@@ -67,11 +53,10 @@ void Lipo::draw(std::shared_ptr<Program> prog,
   Model->popMatrix();
 }
 
-
 void Lipo::update(float dt, Drone &drone) {
   // charge drone battery;
   drone.battery += 25.0f;
-	drone.setBatteriesCollected(drone.getBatteriesCollected()+1);
+  drone.setBatteriesCollected(drone.getBatteriesCollected() + 1);
   newRandPosition();
   return;
 }

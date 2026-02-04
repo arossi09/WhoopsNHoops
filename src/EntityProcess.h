@@ -30,6 +30,7 @@ public:
       }
     }
 
-		//TODO add loop to check if battery needs respawn..
+
   }
+
 };

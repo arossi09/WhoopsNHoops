@@ -68,4 +68,5 @@ void Bonus::newRandPosition() {
   position = possible_locations[(rand() % possible_locations.size())];
 }
 
+
 std::shared_ptr<AABB> Bonus::getAABB() { return bonus_AABB; }

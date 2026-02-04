@@ -180,7 +180,7 @@
 			"name": "metalfence_left_2",
 			"model": "metalfence.obj",
 			"texture": "metalfence.png",
-			"position": [-39, 2, 7.5],
+			"position": [-39, 2, 20],
 			"rotation": [0, 90, 0],
 			"scale": [3, 3, 3]
 		},
@@ -188,7 +188,7 @@
 			"name": "metalfence_left_3",
 			"model": "metalfence.obj",
 			"texture": "metalfence.png",
-			"position": [-39, 2, 12],
+			"position": [-39, 2, -8],
 			"rotation": [0, 90, 0],
 			"scale": [3, 3, 3]
 		},
@@ -196,7 +196,7 @@
 			"name": "metalfence_left_4",
 			"model": "metalfence.obj",
 			"texture": "metalfence.png",
-			"position": [-47.5, 2, 12],
+			"position": [-39, 2, 12],
 			"rotation": [0, 90, 0],
 			"scale": [3, 3, 3]
 		},
@@ -252,8 +252,8 @@
 			"name": "crate_tilted",
 			"model": "storagecrate.obj",
 			"texture": "scaffolding.png",
-			"position": [-9, 6.8, 20],
-			"rotation": [0, -72, 36],
+			"position": [1, 7.1, 10],
+			"rotation": [0, 0, 0],
 			"scale": [6, 6, 6]
 		},
 		{

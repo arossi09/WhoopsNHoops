@@ -46,6 +46,8 @@ struct Drone {
 
   std::string trick = "";
 	std::string oldTrick = "";
+	float styleScore = 0.0f;
+	int scoreDecayRate = 40.0f;
   int score = 0;
 	int oldScore = 0;
 	int oldTrickCount = 0;
@@ -136,12 +138,14 @@ struct Drone {
 			oldTrick = trick;
 			oldTrickCount = trickCount;
 			score = 0;
+			styleScore = 0;
 			trickManager.reset();
 		}
   }
 
   // calculate drone physics
   void updatePosition(float dt) {
+		
     battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
     battery = max(battery, 0.0f);
     if (battery > 100.0f) {
@@ -181,10 +185,13 @@ struct Drone {
     score = trickManager.score;
     trickCount = trickManager.trickCount;
     vec3 up = orientation * vec3(0, 1, 0);
-    trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime);
+    trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime, &styleScore);
+
+		if(styleScore > 0)
+			styleScore -= dt * scoreDecayRate;
 
     // we need to set drone to special mode if above score of 3000
-    if (score >= special_score_thresh) {
+    if (styleScore >= special_score_thresh) {
       special_mode = true;
       droneColor = gold;
       maxVelocity = 150.0f;

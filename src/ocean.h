@@ -1,7 +1,7 @@
 #ifndef OCEAN_H
 #define OCEAN_H
 
-#define PLANE_DIV_AMOUNT 30
+#define PLANE_DIV_AMOUNT 15
 #define PLANE_WIDTH 20
 
 #include "Program.h"

@@ -27,7 +27,7 @@ public:
 
   // src/TrickManager
   void update(float dPitch, float dRoll, float dYaw, const glm::vec3 &up,
-              float dt, float maxTrickTime) {
+              float dt, float maxTrickTime, float *styleScore) {
 
     timeSinceLastTrick += dt;
     if (trickArray.size() > 10)
@@ -36,6 +36,7 @@ public:
     if (splitSFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("splitS");
       score += 500;
+			*styleScore += 500;
       trickCount++;
       resetTrickTimer();
       return;
@@ -44,6 +45,7 @@ public:
     if (rollFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("roll");
       score += 150;
+			*styleScore += 150;
       trickCount++;
       resetTrickTimer();
       return;
@@ -52,6 +54,7 @@ public:
     if (flipFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("flip");
       score += 150;
+			*styleScore += 150;
       trickCount++;
       resetTrickTimer();
       return;

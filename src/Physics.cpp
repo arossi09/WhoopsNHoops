@@ -3,12 +3,14 @@
 namespace Physics {
 void handleCollision(const AABB &box, Drone &drone) {
   AABB droneBox = drone.getAABB();
-  // if(distance(drone.position, box->getCenter())< 5){
-  if (droneBox.intersects(box)) {
-    resolveAABBCollision(box, drone);
-    drone.endCombo();
-    drone.setObstaclesHit(drone.getObstaclesHit() + 1);
-  }
+
+  if(distance(drone.position, box.getCenter())< 100){
+		if (droneBox.intersects(box)) {
+			resolveAABBCollision(box, drone);
+			drone.endCombo();
+			drone.setObstaclesHit(drone.getObstaclesHit() + 1);
+		}
+	}
 }
 
 void handleCollision(const OBB &box, Drone &drone, glm::mat4 &model) {
@@ -17,7 +19,6 @@ void handleCollision(const OBB &box, Drone &drone, glm::mat4 &model) {
   AABB cOBB = transformedBox.toAABB();
   if (transformedBox.intersects(droneBox)) {
     resolveAABBCollision(cOBB, drone);
-    // reset drone score
   }
 }
 

@@ -15,15 +15,14 @@ public:
   std::shared_ptr<Shape> shape;
   glm::vec3 position;
   bool render = true;
-
   Lipo(const std::string &resourceDirectory);
-  void draw(std::shared_ptr<Program> prog,
-            std::shared_ptr<MatrixStack> Model, Drone &drone) override;
+  void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model,
+            Drone &drone) override;
   void update(float dt, Drone &drone) override;
   std::shared_ptr<AABB> getAABB() override;
   // need to add function to call once i detect collision that takes
   // and alters drone state
-  //
+
 private:
   std::vector<glm::vec3> possible_locations = {
       glm::vec3(-21, 6, 3),

@@ -1,6 +1,7 @@
 // TODO fix in scene wher colliders are hard coded move by parent offset
 // poitners to A timer must be introduced that spawns them after one is
 // colelectd
+/*
 #include <chrono>
 #include <glad/glad.h>
 #include <iostream>
@@ -94,7 +95,7 @@ public:
   std::shared_ptr<Lipo> lipo1;
   std::shared_ptr<Lipo> lipo2;
   std::shared_ptr<Lipo> lipo3;
-	// Bonus
+        // Bonus
   std::shared_ptr<Bonus> bonus1;
   std::shared_ptr<Bonus> bonus2;
   std::shared_ptr<Bonus> bonus3;
@@ -110,6 +111,7 @@ public:
   float radius = 100;
 
   float phi = 0.0f;
+        float elapsedTime = 0.0f;
   float theta = PI / 2;
   float roll = 0;
 
@@ -129,8 +131,8 @@ public:
   float cTheta = 0;
   float eTheta = 0;
   float hTheta = 0;
-	float textFallY = 0.0f;
-	float fallSpeed = 30.0f;
+        float textFallY = 0.0f;
+        float fallSpeed = 30.0f;
   bool debugCam = false;
   bool hud_flag = true;
 
@@ -298,11 +300,11 @@ public:
 
     GLSL::checkVersion();
     lipo1 = make_shared<Lipo>(resourceDirectory);
-		lipo2 = make_shared<Lipo>(resourceDirectory);
-		lipo3 = make_shared<Lipo>(resourceDirectory);
-		bonus1 = make_shared<Bonus>(resourceDirectory);
-		bonus2 = make_shared<Bonus>(resourceDirectory);
-		bonus3 = make_shared<Bonus>(resourceDirectory);
+                lipo2 = make_shared<Lipo>(resourceDirectory);
+                lipo3 = make_shared<Lipo>(resourceDirectory);
+                bonus1 = make_shared<Bonus>(resourceDirectory);
+                bonus2 = make_shared<Bonus>(resourceDirectory);
+                bonus3 = make_shared<Bonus>(resourceDirectory);
     entityProcess.add(lipo1);
     entityProcess.add(lipo2);
     entityProcess.add(lipo3);
@@ -497,13 +499,12 @@ public:
     }
   }
 
-  /*sets the program passed model uniform to the MatrixStack passed*/
+  sets the program passed model uniform to the MatrixStack passed
   void setModel(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> M) {
     glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
                        value_ptr(M->topMatrix()));
   }
 
-  /*resizes the model into -1 to 1 range and centers at the origin*/
   void resize_and_center(vec3 gMin, vec3 gMax, shared_ptr<MatrixStack> Model) {
     float center_x = (gMax.x + gMin.x) / 2;
     float center_y = (gMax.y + gMin.y) / 2;
@@ -516,7 +517,6 @@ public:
     Model->scale(vec3(scale, scale, scale));
   }
 
-  /*function to render the scene, dt is delta time*/
   void render() {
     // Get current frame buffer size.
     int width, height;
@@ -610,10 +610,8 @@ public:
     physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
     Model->popMatrix();
     texProg->unbind();
-    /*we need this to restrict drone to worldBox*/
     Physics::clampToWorld(worldBox, drone);
 
-    /*all of the text*/
     textProg->bind();
     glUniform1i(textProg->getUniform("text"), 0);
     glUniformMatrix4fv(textProg->getUniform("P"), 1, GL_FALSE,
@@ -664,6 +662,7 @@ public:
       // main hud
       int speed = static_cast<int>(length(drone.velocity));
 
+
       // render information in bottom left
       Text::RenderText(textProg, string("SPEED: " + to_string(speed)), 25.0f,
                        25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
@@ -674,31 +673,34 @@ public:
           string("BAT: " + to_string(static_cast<int>(drone.battery))), 25.0f,
           125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
-      // render score
+      // render score & trick description
       if (drone.trickCount > 0) {
-				textFallY = 0.0;
+                                textFallY = 0.0;
         Text::RenderText(textProg,
                          string(to_string(drone.score) + " x " +
                                 to_string(drone.trickCount)),
-                         340.0f, 70.0f, .8f, glm::vec3(1, 1, 1), characters);
+                         340.0f+sin(glfwGetTime()*drone.trickCount)*.5, 70.0f+cos(glfwGetTime()*drone.trickCount)*.5,
+.8f, glm::vec3(1, 1, 1), characters);
+
+                                Text::RenderText(textProg, drone.trick,
+400.0f, 50.0f, .5f, glm::vec3(1, 1, 0), characters, 500, true);
+
       } else if (drone.oldTrick != ""){
-				textFallY += fallSpeed * dt;
+                                textFallY += fallSpeed * dt;
         Text::RenderText(textProg,
                          string(to_string(drone.oldScore) + " x " +
                                 to_string(drone.trickCount)),
-                         340.0f, 70.0f - textFallY, .8f, glm::vec3(1, 0, 0), characters);
+                         340.0f, 70.0f - textFallY, .8f, glm::vec3(1, 0, 0),
+characters);
       // render drone trick description
       Text::RenderText(textProg, drone.oldTrick, 400.0f, 50.0f-textFallY, .5f,
                        glm::vec3(1, 0, 0), characters, 500, true);
-			}
+                        }
 
       Text::RenderText(textProg,
                        string("Score: " + to_string(drone.totalScore)), 255.0f,
                        550.0f, .5f, glm::vec3(0, 0, 0), characters, 500, true);
 
-      // render drone trick description
-      Text::RenderText(textProg, drone.trick, 400.0f, 50.0f, .5f,
-                       glm::vec3(1, 1, 0), characters, 500, true);
     }
     if (!gamepad_connected) {
       // gamepad disconnnected
@@ -712,7 +714,7 @@ public:
 
     // draw and update hud
     if (!goCamera && !gameOverFlag) {
-      float fill = drone.score / drone.special_score_thresh - dt;
+      float fill = drone.styleScore / drone.special_score_thresh - dt;
       hud.setTargetFill(fill);
       hud.update(dt);
       hud.draw();
@@ -938,7 +940,10 @@ public:
     }
   }
 };
-
+*/
+#include "WindowManager.h"
+#include "Game.h"
+#include <iostream>
 int main(int argc, char *argv[]) {
   // Where the resources are loaded from
   std::string resourceDir = "../resources";
@@ -947,33 +952,33 @@ int main(int argc, char *argv[]) {
     resourceDir = argv[1];
   }
 
-  Application *application = new Application();
+  Game *game = new Game();
 
   // Your main will always include a similar set up to establish your window
   // and GL context, etc.
 
   WindowManager *windowManager = new WindowManager();
   windowManager->init(640, 480);
-  windowManager->setEventCallbacks(application);
-  application->windowManager = windowManager;
+  windowManager->setEventCallbacks(game);
+  game->windowManager = windowManager;
 
   // This is the code that will likely change program to program as you
   // may need to initialize or set up different data and state
 
-  application->init(resourceDir);
-  application->initGeom(resourceDir);
+  game->init(resourceDir);
+  game->initGeom(resourceDir);
 
   // Loop until the user closes the window.
   while (!glfwWindowShouldClose(windowManager->getHandle())) {
-    application->calculateDeltaTime();
+    game->calculateDeltaTime();
 
-    if (application->drone.battery <= 0) {
-      application->gameOver();
+    if (game->getDrone()->battery <= 0) {
+      game->gameOver();
     }
     // Render scene.
-    application->render();
-    application->processKeyInput(
-        application->windowManager->getHandle()); // might change this to poll
+    game->render();
+    game->processKeyInput(
+        game->windowManager->getHandle()); // might change this to poll
     // we need to poll the input from gamepad
     windowManager->pollGamepadInput();
     // Swap front and back buffers.
