@@ -47,13 +47,13 @@ struct Drone {
   std::string trick = "";
 	std::string oldTrick = "";
 	float styleScore = 0.0f;
-	int scoreDecayRate = 40.0f;
+	int scoreDecayRate = 0.0f;
   int score = 0;
 	int oldScore = 0;
 	int oldTrickCount = 0;
   int totalScore = 0;
   bool special_mode = false;
-  float special_score_thresh = 2000.0f;
+  float special_score_thresh = 1500.0f;
   int trickCount = 0;
 	//final stats
 	int obstaclesHit = 0;

@@ -6,7 +6,7 @@
 
 Bonus::Bonus(const std::string &resourceDirectory) {
   // set defualt position
-	newRandPosition();
+	needsRespawn = true;
   // initilize the bonus texture for loading later
   bonus_texture = std::make_shared<Texture>();
   bonus_texture->setFilename(resourceDirectory + "/bonus.png");
@@ -54,18 +54,11 @@ void Bonus::draw(std::shared_ptr<Program> prog,
 
 void Bonus::update(float dt, Drone &drone) {
   // charge drone battery;
-	// TODO add to score and add bonus collected text
-	// TODO add to bonus collected tally
 	if(drone.special_mode){
 		drone.scoreBonus();
-		newRandPosition();
+		needsRespawn = true;
 	}
   return;
-}
-
-
-void Bonus::newRandPosition() {
-  position = possible_locations[(rand() % possible_locations.size())];
 }
 
 

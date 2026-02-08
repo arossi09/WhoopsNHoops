@@ -11,4 +11,14 @@ public:
   virtual std::shared_ptr<AABB> getAABB() = 0;
   virtual void draw(std::shared_ptr<Program> prog,
                     std::shared_ptr<MatrixStack> Model, Drone &drone) = 0;
+
+  // getters and setters
+  virtual glm::vec3 getPos() { return position; }
+  virtual void setPos(glm::vec3 new_pos) { position = new_pos; }
+  virtual bool getNeedRespawn() { return needsRespawn; }
+  virtual void setNeedRespawn(bool v) { needsRespawn = v; }
+
+protected:
+  glm::vec3 position{};
+  bool needsRespawn = false;
 };

@@ -1,15 +1,19 @@
 // in charge of holding entities and operating on them
 #include "Entity.h"
+#include "SpawnManager.h"
 #include <iostream>
 
 class EntityProcess {
 public:
+  SpawnManager spawn_manager{};
+
   std::vector<std::shared_ptr<Entity>> entities;
 
   // we need to loop through entites and draw them
-  void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model, Drone &drone) {
+  void draw(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> Model,
+            Drone &drone) {
     for (auto const &ent : entities) {
-			
+
       ent->draw(prog, Model, drone);
     }
   }
@@ -25,12 +29,18 @@ public:
         if (entities[i]->getAABB()->intersects(droneAABB)) {
           entities[i]->update(dt, drone);
         }
+				//we need pull new spawn for entity from spawn manager if
+				//the entity needs a respawn
+        if (entities[i]->getNeedRespawn()) {
+          glm::vec3 curr_pos = entities[i]->getPos();
+          entities[i]->setPos(spawn_manager.get_new_spawn(curr_pos));
+          std::cout << entities[i] << " new Pos " << entities[i]->getPos().x
+                    << "\n";
+          entities[i]->setNeedRespawn(false);
+        }
       } else {
         std::cout << "UPDATE::ENTITIES: AABB is NULL!" << std::endl;
       }
     }
-
-
   }
-
 };

@@ -6,7 +6,7 @@
 
 Lipo::Lipo(const std::string &resourceDirectory) {
   // set defualt position
-  newRandPosition();
+	needsRespawn = true; 
   // initilize the lipo texture for loading later
   lipo_texture = std::make_shared<Texture>();
   lipo_texture->setFilename(resourceDirectory + "/1slipo.png");
@@ -37,8 +37,7 @@ Lipo::Lipo(const std::string &resourceDirectory) {
 // TODO create own model matrix to reposition based on local pos and draw
 void Lipo::draw(std::shared_ptr<Program> prog,
                 std::shared_ptr<MatrixStack> Model, Drone &drone) {
-  // std::cout << "Drawing the lipo at "  << position.x << " " <<  position.y <<
-  // " " << position.z<< '\n';
+
   lipo_texture->bind(prog->getUniform("Texture0"));
   Model->pushMatrix();
   Model->translate(
@@ -57,14 +56,12 @@ void Lipo::update(float dt, Drone &drone) {
   // charge drone battery;
   drone.battery += 25.0f;
   drone.setBatteriesCollected(drone.getBatteriesCollected() + 1);
-  newRandPosition();
+	needsRespawn = true;
+	//newRandPosition();
   return;
 }
 
 void Lipo::chargeBattery(Drone drone) { drone.battery = 100.0f; }
 
-void Lipo::newRandPosition() {
-  position = possible_locations[(rand() % possible_locations.size())];
-}
 
 std::shared_ptr<AABB> Lipo::getAABB() { return lipo_AABB; }

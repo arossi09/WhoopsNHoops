@@ -1,3 +1,6 @@
+//this class is needed to load in the obj objects from a given .json file
+//it usees the sceneobject to load the objects texture, transformations, colliders
+//and functions a draw call as well
 #ifndef SCENE_H
 #define SCENE_H
 
@@ -30,7 +33,8 @@ public:
     glm::vec3 rotation;
     glm::vec3 scale = glm::vec3(1.0f);
     std::vector<std::shared_ptr<AABB>> colliders;
-
+		//this flag is for deciding if object can be interacted with (moving, collidable)
+		bool is_static = false;
     void draw(std::shared_ptr<Program> prog, const glm::mat4 &parent);
     void setupColliders();
 

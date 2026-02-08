@@ -35,8 +35,10 @@ void SceneObject::setupColliders() {
   colliders.clear();
   glm::mat4 model = glm::mat4(1.0f);
 
-
-  model = glm::translate(model, glm::vec3(0, 2, 0));					// this needs to be fixed the reason for it is beacuse of draw taking in parent that is modified
+  model = glm::translate(
+      model,
+      glm::vec3(0, 2, 0)); // this needs to be fixed the reason for it is
+                           // beacuse of draw taking in parent that is modified
   model = glm::scale(model, glm::vec3(4, 4, 4));
 
   model = glm::translate(model, position);
@@ -45,7 +47,7 @@ void SceneObject::setupColliders() {
   model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
   model = glm::scale(model, scale);
 
-	//for resize and centering
+  // for resize and centering
   float center_x = (mesh->gMax.x + mesh->gMin.x) / 2;
   float center_y = (mesh->gMax.y + mesh->gMin.y) / 2;
   float center_z = (mesh->gMax.z + mesh->gMin.z) / 2;
@@ -77,7 +79,6 @@ void Scene::load(const std::string &path, ResourceManager &rm) {
 
   for (auto &obj : data["objects"]) {
     SceneObject sceneObj;
-
     sceneObj.name = obj.value("name", "unamed");
 
     std::string modelFile = obj.value("model", "");
@@ -86,6 +87,9 @@ void Scene::load(const std::string &path, ResourceManager &rm) {
     sceneObj.mesh = rm.getMesh(sceneObj.name, "../resources/" + modelFile);
     sceneObj.texture =
         rm.getTexture(sceneObj.name, "../resources/" + textureFile);
+    // if flag for no collision for static objects
+    auto is_static_ = obj.value("static", false);
+    sceneObj.is_static = is_static_;
 
     auto pos = obj["position"];
     auto rot = obj["rotation"];
@@ -102,7 +106,8 @@ void Scene::load(const std::string &path, ResourceManager &rm) {
 // and add those colliders to the physics world object
 void Scene::setupPhysics(PhysicsWorld &world) {
   for (auto &obj : sceneObjects) {
-    obj.setupColliders();
+    if (!obj.is_static)
+      obj.setupColliders();
     world.addSceneObject(obj);
   }
 }

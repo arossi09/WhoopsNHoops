@@ -334,7 +334,8 @@
 			"texture": "tileblock.png",
 			"position": [-95, 1, -70],
 			"rotation": [0, -45, 0],
-			"scale": [50, 20, 50]
+			"scale": [50, 20, 50],
+			"static": true
 		},
 		{
 			"name": "farground_left_2",
@@ -342,7 +343,8 @@
 			"texture": "tileblock.png",
 			"position": [-105, 3, -8],
 			"rotation": [0, 0, 0],
-			"scale": [30, 40, 30]
+			"scale": [30, 40, 30],
+			"static": true
 		},
 		{
 			"name": "farground_left_3",
@@ -350,7 +352,8 @@
 			"texture": "tileblock.png",
 			"position": [-98, 3, 6],
 			"rotation": [0, 45, 0],
-			"scale": [30, 40, 30]
+			"scale": [30, 40, 30],
+			"static": true
 		},
 		{
 			"name": "farground_right_1",
@@ -358,7 +361,8 @@
 			"texture": "tileblock.png",
 			"position": [95, 1, -70],
 			"rotation": [0, 45, 0],
-			"scale": [50, 20, 50]
+			"scale": [50, 20, 50],
+			"static": true
 		},
 		{
 			"name": "farground_right_2",
@@ -366,7 +370,8 @@
 			"texture": "tileblock.png",
 			"position": [105, 3, -8],
 			"rotation": [0, 0, 0],
-			"scale": [30, 40, 30]
+			"scale": [30, 40, 30],
+			"static": true
 		},
 		{
 			"name": "farground_right_3",
@@ -374,7 +379,8 @@
 			"texture": "tileblock.png",
 			"position": [98, 3, 6],
 			"rotation": [0, -45, 0],
-			"scale": [30, 40, 30]
+			"scale": [30, 40, 30],
+			"static": true
 		},
 		{
 			"name": "skyscraper_1",
@@ -382,7 +388,8 @@
 			"texture": "skyscraper.png",
 			"position": [-80, 28, -80],
 			"rotation": [0, 0, 0],
-			"scale": [20, 20, 20]
+			"scale": [20, 20, 20],
+			"static": true
 		},
 		{
 			"name": "skyscraper_2",
@@ -390,7 +397,8 @@
 			"texture": "skyscraper.png",
 			"position": [-105, 24, -65],
 			"rotation": [0, 51.43, 0],
-			"scale": [16, 16, 16]
+			"scale": [16, 16, 16],
+			"static": true
 		},
 		{
 			"name": "skyscraper_3",
@@ -398,7 +406,16 @@
 			"texture": "skyscraper.png",
 			"position": [-110, 38, -10],
 			"rotation": [0, 0, 0],
-			"scale": [20, 20, 20]
+			"scale": [20, 20, 20],
+			"static": true
+		},
+		{
+			"name": "mountain",
+			"model": "mountain_landscape.obj",
+			"position": [0, 70, 200],
+			"rotation": [0, 90, 0],
+			"scale": [300, 300, 300],
+			"static": true
 		},
 		{
 			"name": "crane",

@@ -292,33 +292,20 @@ void Game::initGeom(const std::string &resourceDirectory) {
     cube->init();
   }
 
-  std::vector<tinyobj::shape_t> TOshapes;
-  std::vector<tinyobj::material_t> objMaterials;
-  // load in the mesh and make the shape(s)
-  rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr,
-                        (resourceDirectory + "/sphereWTex.obj").c_str());
-  if (!rc) {
-		std::cerr << errStr << std::endl;
-  } else {
-    sphere = std::make_shared<Shape>();
-    sphere->createShape(TOshapes[0]);
-    sphere->measure();
-    sphere->init();
-  }
 
-  std::vector<tinyobj::shape_t> TOshapesA;
-  std::vector<tinyobj::material_t> objMaterialsA;
+  std::vector<tinyobj::shape_t> TOshapesB;
+  std::vector<tinyobj::material_t> objMaterialsB;
   // load in the mesh and make the shape(s)
-  rc = tinyobj::LoadObj(TOshapesA, objMaterialsA, errStr,
-                        (resourceDirectory + "/ground.obj").c_str());
+  rc = tinyobj::LoadObj(TOshapesB, objMaterialsB, errStr,
+                        (resourceDirectory + "/mountain_landscape.obj").c_str());
   if (!rc) {
 		std::cerr << errStr << std::endl;
   } else {
 
-    farground = std::make_shared<Shape>();
-    farground->createShape(TOshapesA[0]);
-    farground->measure();
-    farground->init();
+    mountain= std::make_shared<Shape>();
+    mountain->createShape(TOshapesB[0]);
+    mountain->measure();
+    mountain->init();
   }
 
   std::vector<tinyobj::shape_t> TOshapesR;
@@ -358,6 +345,8 @@ void Game::resize_and_center(vec3 gMin, vec3 gMax,
   Model->scale(vec3(scale, scale, scale));
 }
 
+//TODO void Game::handleGameLogic()
+
 /*function to render the scene, dt is delta time*/
 void Game::render() {
   // Get current frame buffer size.
@@ -375,7 +364,7 @@ void Game::render() {
   auto Model = std::make_shared<MatrixStack>();
 
   // update Drone sates
-  float yawVel = get_rate(drone.yawInput, drone.rcRate, drone.superRate);
+  float yawVel = get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
   float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
   float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
 

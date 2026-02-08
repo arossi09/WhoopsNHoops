@@ -1,3 +1,6 @@
+//this class is needed to handle the physics in the world.
+//It holds a list of colliders which it detects collision with
+//the given SceneObject, which definiton can be found in the Scene.h file
 #pragma once
 #include "AABB.h"
 #include "Drone.h"

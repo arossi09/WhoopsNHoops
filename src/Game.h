@@ -68,10 +68,9 @@ private:
   std::shared_ptr<Program> solidProg;
   std::shared_ptr<Program> skyProg;
   // our static geometry
-	std::shared_ptr<Shape> sphere;
-	std::shared_ptr<Shape> farground;
 	std::shared_ptr<Shape> cube;
 	std::shared_ptr<Shape> skyscraper;
+	std::shared_ptr<Shape> mountain;
   // the image to use as a texture (ground)
 	std::shared_ptr<Texture> stylebar_sheet;
 	std::shared_ptr<Texture> lipo_texture;
