@@ -16,9 +16,8 @@ int Mountain::init() {
   std::vector<tinyobj::shape_t> TOshapes;
   std::vector<tinyobj::material_t> objMaterials;
   std::string errStr;
-  bool rc =
-      tinyobj::LoadObj(TOshapes, objMaterials, errStr,
-                       (resourceDirectory + "/landscape.obj").c_str());
+  bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr,
+                             (resourceDirectory + "/landscape.obj").c_str());
   if (!rc) {
     std::cerr << errStr << std::endl;
   } else {
@@ -39,7 +38,8 @@ int Mountain::init() {
 // we need this function to be able to sample points on the
 // mountain to draw trees given a threshold
 void Mountain::sampleTreePoints(float thresh, std::vector<glm::vec3> tris) {
-  for (int i = 0; i < tris.size(); i += 3) {
+	tree_samples.clear();
+  /*for (int i = 0; i < tris.size(); i += 3) {
     // need to put these in world cordiantes
     glm::vec3 v0 = tris[i];
     glm::vec3 v1 = tris[i + 1];
@@ -55,19 +55,47 @@ void Mountain::sampleTreePoints(float thresh, std::vector<glm::vec3> tris) {
       tree_samples.push_back(ay);
       tree_samples.push_back(az);
     }
-  }
+  }*/
+
+	tree_samples.push_back(1.0f);
+	tree_samples.push_back(1.0f);
+	tree_samples.push_back(1.0f);
+
+  // send the tree_samples to a GPU buffer
+  glGenBuffers(1, &VBO);
+  glGenVertexArrays(1, &VAO);
+  glBindVertexArray(VAO);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, tree_samples.size() * sizeof(float), tree_samples.data(),
+               GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+  glBindVertexArray(0);
+
   return;
 }
 
 // this function will draw the mountain along with the sampled trees
 int Mountain::draw(std::shared_ptr<Program> prog,
+                   std::shared_ptr<Program> bill_prog,
                    std::shared_ptr<MatrixStack> Model) {
-  // TODO loop through sampled points and translate the tree by that point +
-  // whatever mountains transformations are
-	mountain_texture->bind(prog->getUniform("Texture0"));
+
+  // we need to draw the trees from the VBO bounded in init
+  bill_prog->bind();
+		Model->pushMatrix();
+		glUniformMatrix4fv(bill_prog->getUniform("M"), 1, GL_FALSE,
+											 value_ptr(Model->topMatrix()));
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_POINTS, 0, 1);
+		glBindVertexArray(0);
+		Model->popMatrix();
+  bill_prog->unbind();
+
+  // we need to draw the mountain
+  prog->bind();
+  mountain_texture->bind(prog->getUniform("Texture0"));
   Model->pushMatrix();
   Model->translate(glm::vec3(-4, -30, 0));
-  //Model->rotate(-(glm::pi<float>() / 2.0f), glm::vec3(0, 1, 0));
   Model->scale(glm::vec3(300, 300, 300));
   glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
                      value_ptr(Model->topMatrix()));

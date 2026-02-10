@@ -75,6 +75,7 @@ private:
 	std::shared_ptr<Shape> mountain;
   // the image to use as a texture (ground)
 	std::shared_ptr<Texture> stylebar_sheet;
+	std::shared_ptr<Texture> tree_texture;
 	std::map<char, Character> characters;
   float dt;
 	//Handles operating on entities

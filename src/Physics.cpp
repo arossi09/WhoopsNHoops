@@ -4,7 +4,7 @@ namespace Physics {
 void handleCollision(const AABB &box, Drone &drone) {
   AABB droneBox = drone.getAABB();
 
-  if(distance(drone.position, box.getCenter())< 100){
+  if(distance(drone.position, box.getCenter())< 200){
 		if (droneBox.intersects(box)) {
 			resolveAABBCollision(box, drone);
 			drone.endCombo();

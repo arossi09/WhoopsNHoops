@@ -60,6 +60,7 @@ bool Program::addShader(GLenum shader_type, std::string &shader_name) {
   }
 
   CHECKED_GL_CALL(glAttachShader(pid, shader));
+	glDeleteShader(shader);//TODO this might be bad
   return true;
 }
 
@@ -92,6 +93,7 @@ bool Program::init() {
     }
     return false;
   }
+
 
   return true;
 }
