@@ -8,6 +8,7 @@ void Ocean::init() {
   waterShader.setVerbose(true);
   waterShader.setShaderNames(resourceDir + "/shaders/waterVS.glsl",
                              resourceDir + "/shaders/waterFS.glsl",
+														 "", // empty for g shader
                              resourceDir + "/shaders/waterTCS.glsl",
                              resourceDir + "/shaders/waterTES.glsl");
   waterShader.init();

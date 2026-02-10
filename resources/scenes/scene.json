@@ -410,14 +410,6 @@
 			"static": true
 		},
 		{
-			"name": "mountain",
-			"model": "mountain_landscape.obj",
-			"position": [0, 70, 200],
-			"rotation": [0, 90, 0],
-			"scale": [300, 300, 300],
-			"static": true
-		},
-		{
 			"name": "crane",
 			"model": "multi_crane.obj",
 			"texture": "guardrail.png",

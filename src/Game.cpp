@@ -152,6 +152,13 @@ void Game::resizeCallback(GLFWwindow *window, int width, int height) {
 void Game::init(const std::string &resourceDirectory) {
 
   GLSL::checkVersion();
+  // Set background color.
+  glClearColor(.72f, .84f, 1.06f, 1.0f);
+  // Enable z-buffer test.
+  glEnable(GL_DEPTH_TEST);
+
+  /*--------------ENTITIES----------------*/
+
   lipo1 = std::make_shared<Lipo>(resourceDirectory);
   lipo2 = std::make_shared<Lipo>(resourceDirectory);
   lipo3 = std::make_shared<Lipo>(resourceDirectory);
@@ -165,11 +172,7 @@ void Game::init(const std::string &resourceDirectory) {
   entityProcess.add(bonus2);
   entityProcess.add(bonus3);
 
-  // Set background color.
-  glClearColor(.72f, .84f, 1.06f, 1.0f);
-  // Enable z-buffer test.
-  glEnable(GL_DEPTH_TEST);
-
+  /*--------------CAMERA PATHS-------------*/
   splinepath[0] =
       Spline(glm::vec3(-radius, 10, -radius), glm::vec3(-radius, 15, -radius),
              glm::vec3(radius, 15, -radius), glm::vec3(radius, 10, -radius), 5);
@@ -178,6 +181,7 @@ void Game::init(const std::string &resourceDirectory) {
   splinepath[2] = Spline(glm::vec3(150, 10, 10), glm::vec3(150, 10, 10),
                          glm::vec3(150, 10, -20), glm::vec3(150, 10, -20), 10);
 
+  /*----------------Progams-----------------*/
   // solid program for drawing solid colored objects
   solidProg = std::make_shared<Program>();
   solidProg->setVerbose(true);
@@ -222,6 +226,7 @@ void Game::init(const std::string &resourceDirectory) {
   texProg->addAttribute("vertNor");
   texProg->addAttribute("vertTex");
 
+  // program for drawing skybox
   skyProg = std::make_shared<Program>();
   skyProg->setVerbose(true);
   skyProg->setShaderNames(resourceDirectory + "/shaders/skyVS.glsl",
@@ -232,6 +237,22 @@ void Game::init(const std::string &resourceDirectory) {
   skyProg->addUniform("skybox");
   skyProg->addAttribute("vertPos");
 
+  billboardProg = std::make_shared<Program>();
+  billboardProg->setVerbose(true);
+  billboardProg->setShaderNames(resourceDirectory + "/shaders/billboardVS.glsl",
+                                resourceDirectory + "/shaders/billboardFS.glsl",
+                                resourceDirectory + "/shaders/billboardGS.glsl");
+
+	//program for the billboarded objects
+	billboardProg->init();
+	billboardProg->addUniform("P");
+	billboardProg->addUniform("V");
+	billboardProg->addUniform("cameraPosition");
+	billboardProg->addUniform("Texture0");
+	billboardProg->addAttribute("vertPos");
+
+  /*------------Textures------------*/
+  // texture for the style meter
   stylebar_sheet = std::make_shared<Texture>();
   stylebar_sheet->setFilename(resourceDirectory + "/stylebar_sheet.png");
   stylebar_sheet->init();
@@ -239,13 +260,7 @@ void Game::init(const std::string &resourceDirectory) {
   stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
   stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
 
-  lipo_texture = std::make_shared<Texture>();
-  lipo_texture->setFilename(resourceDirectory + "/1slipo.png");
-  lipo_texture->init();
-  lipo_texture->setUnit(0);
-  lipo_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-  lipo_texture->setFiltering(GL_NEAREST, GL_NEAREST);
-
+  /*----------Rendered Object--------*/
   // set up the scenes models, textures, and physics
   scene.load(resourceDirectory + "/scenes/scene.json", resourceManager);
   scene.setupPhysics(physicsWorld);
@@ -264,6 +279,9 @@ void Game::init(const std::string &resourceDirectory) {
   skybox.setFaces(faces);
   skybox.init();
 
+  mountain_landscape.setResourceDir(resourceDirectory);
+  mountain_landscape.init();
+
   ocean.setResourceDir(resourceDirectory);
   ocean.init();
 }
@@ -280,11 +298,11 @@ void Game::initGeom(const std::string &resourceDirectory) {
   // load in the mesh and make the shape(s)
   std::vector<tinyobj::shape_t> TOshapesZ;
   std::vector<tinyobj::material_t> objMaterialsZ;
-	std::string errStr;
+  std::string errStr;
   bool rc = tinyobj::LoadObj(TOshapesZ, objMaterialsZ, errStr,
                              (resourceDirectory + "/cube.obj").c_str());
   if (!rc) {
-		std::cerr << errStr << std::endl;
+    std::cerr << errStr << std::endl;
   } else {
     cube = std::make_shared<Shape>();
     cube->createShape(TOshapesZ[0]);
@@ -292,35 +310,20 @@ void Game::initGeom(const std::string &resourceDirectory) {
     cube->init();
   }
 
-
   std::vector<tinyobj::shape_t> TOshapesB;
   std::vector<tinyobj::material_t> objMaterialsB;
   // load in the mesh and make the shape(s)
-  rc = tinyobj::LoadObj(TOshapesB, objMaterialsB, errStr,
-                        (resourceDirectory + "/mountain_landscape.obj").c_str());
+  rc =
+      tinyobj::LoadObj(TOshapesB, objMaterialsB, errStr,
+                       (resourceDirectory + "/mountain_landscape.obj").c_str());
   if (!rc) {
-		std::cerr << errStr << std::endl;
+    std::cerr << errStr << std::endl;
   } else {
 
-    mountain= std::make_shared<Shape>();
+    mountain = std::make_shared<Shape>();
     mountain->createShape(TOshapesB[0]);
     mountain->measure();
     mountain->init();
-  }
-
-  std::vector<tinyobj::shape_t> TOshapesR;
-  std::vector<tinyobj::material_t> objMaterialsR;
-  // load in the mesh and make the shape(s)
-  rc = tinyobj::LoadObj(TOshapesR, objMaterialsR, errStr,
-                        (resourceDirectory + "/skyscraper.obj").c_str());
-  if (!rc) {
-		std::cerr << errStr << std::endl;
-  } else {
-
-    skyscraper = std::make_shared<Shape>();
-    skyscraper->createShape(TOshapesR[0]);
-    skyscraper->measure();
-    skyscraper->init();
   }
 }
 
@@ -345,7 +348,7 @@ void Game::resize_and_center(vec3 gMin, vec3 gMax,
   Model->scale(vec3(scale, scale, scale));
 }
 
-//TODO void Game::handleGameLogic()
+// TODO void Game::handleGameLogic()
 
 /*function to render the scene, dt is delta time*/
 void Game::render() {
@@ -364,7 +367,8 @@ void Game::render() {
   auto Model = std::make_shared<MatrixStack>();
 
   // update Drone sates
-  float yawVel = get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
+  float yawVel =
+      get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
   float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
   float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
 
@@ -384,7 +388,7 @@ void Game::render() {
 
   // Apply perspective projection.
   Projection->pushMatrix();
-  Projection->perspective(glm::radians(75.0f), aspect, 0.01f, 800.0f);
+  Projection->perspective(glm::radians(75.0f), aspect, 0.01f, -400.0f);
   // View is global translation along negative z for now
   View->pushMatrix();
   View->loadIdentity();
@@ -436,7 +440,9 @@ void Game::render() {
   scene.draw(texProg, Model->topMatrix());
   // draw the entities
   entityProcess.draw(texProg, Model, drone);
+  mountain_landscape.draw(texProg, Model);
   entityProcess.update(dt, drone); // TODO move this somewhere else
+                                   // TODO mountain.draw()
   // handle the drone collisions among all colliders
   physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
   Model->popMatrix();
@@ -457,28 +463,29 @@ void Game::render() {
   if (gameOverFlag) {
     Text::RenderText(textProg, std::string("Final Stats:"), 100, 550, .8f,
                      glm::vec3(1, 1, 1), characters);
-    Text::RenderText(
-        textProg,
-        std::string("Score................." + std::to_string(drone.finalScore)), 150,
-        500, .8f, glm::vec3(1, 1, 0), characters);
-    Text::RenderText(textProg, std::string("Time Alive............" + std::to_string(0)),
+    Text::RenderText(textProg,
+                     std::string("Score................." +
+                                 std::to_string(drone.finalScore)),
+                     150, 500, .8f, glm::vec3(1, 1, 0), characters);
+    Text::RenderText(textProg,
+                     std::string("Time Alive............" + std::to_string(0)),
                      150, 450, .8f, glm::vec3(1, 1, 0), characters);
-    Text::RenderText(
-        textProg,
-        std::string("Total Combos.........." + std::to_string(drone.totalCombos)), 150,
-        400, .8f, glm::vec3(1, 1, 0), characters);
-    Text::RenderText(
-        textProg,
-        std::string("Highest Combo........." + std::to_string(drone.highestCombo)), 150,
-        350, .8f, glm::vec3(1, 1, 0), characters);
-    Text::RenderText(
-        textProg,
-        std::string("Batteries Collected..." + std::to_string(drone.batteriesCollected)),
-        150, 300, .8f, glm::vec3(1, 1, 0), characters);
-    Text::RenderText(
-        textProg,
-        std::string("Obstacles Hit........." + std::to_string(drone.obstaclesHit)), 150,
-        250, .8f, glm::vec3(1, 1, 0), characters);
+    Text::RenderText(textProg,
+                     std::string("Total Combos.........." +
+                                 std::to_string(drone.totalCombos)),
+                     150, 400, .8f, glm::vec3(1, 1, 0), characters);
+    Text::RenderText(textProg,
+                     std::string("Highest Combo........." +
+                                 std::to_string(drone.highestCombo)),
+                     150, 350, .8f, glm::vec3(1, 1, 0), characters);
+    Text::RenderText(textProg,
+                     std::string("Batteries Collected..." +
+                                 std::to_string(drone.batteriesCollected)),
+                     150, 300, .8f, glm::vec3(1, 1, 0), characters);
+    Text::RenderText(textProg,
+                     std::string("Obstacles Hit........." +
+                                 std::to_string(drone.obstaclesHit)),
+                     150, 250, .8f, glm::vec3(1, 1, 0), characters);
 
     Text::RenderText(textProg, "PRESS R TO TRY AGAIN", 400, 175,
                      .1 * sTheta + .7, glm::vec3(0, 1, 0), characters, 500,
@@ -495,23 +502,25 @@ void Game::render() {
     int speed = static_cast<int>(length(drone.velocity));
 
     // render information in bottom left
-    Text::RenderText(textProg, std::string("SPEED: " + std::to_string(speed)), 25.0f,
-                     25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
+    Text::RenderText(textProg, std::string("SPEED: " + std::to_string(speed)),
+                     25.0f, 25.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f),
+                     characters);
     Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f,
                      glm::vec3(0.5, 0.8f, 0.2f), characters);
     Text::RenderText(
-        textProg, std::string("BAT: " + std::to_string(static_cast<int>(drone.battery))),
+        textProg,
+        std::string("BAT: " + std::to_string(static_cast<int>(drone.battery))),
         25.0f, 125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
 
     // render score & trick description
     if (drone.trickCount > 0) {
       textFallY = 0.0;
-      Text::RenderText(
-          textProg,
-          std::string(std::to_string(drone.score) + " x " + std::to_string(drone.trickCount)),
-          340.0f + sin(glfwGetTime() * drone.trickCount) * .5,
-          70.0f + cos(glfwGetTime() * drone.trickCount) * .5, .8f,
-          glm::vec3(1, 1, 1), characters);
+      Text::RenderText(textProg,
+                       std::string(std::to_string(drone.score) + " x " +
+                                   std::to_string(drone.trickCount)),
+                       340.0f + sin(glfwGetTime() * drone.trickCount) * .5,
+                       70.0f + cos(glfwGetTime() * drone.trickCount) * .5, .8f,
+                       glm::vec3(1, 1, 1), characters);
 
       Text::RenderText(textProg, drone.trick, 400.0f, 50.0f, .5f,
                        glm::vec3(1, 1, 0), characters, 500, true);
@@ -520,7 +529,7 @@ void Game::render() {
       textFallY += text_fallSpeed * dt;
       Text::RenderText(textProg,
                        std::string(std::to_string(drone.oldScore) + " x " +
-                              std::to_string(drone.trickCount)),
+                                   std::to_string(drone.trickCount)),
                        340.0f, 70.0f - textFallY, .8f, glm::vec3(1, 0, 0),
                        characters);
       // render drone trick description
@@ -528,9 +537,9 @@ void Game::render() {
                        glm::vec3(1, 0, 0), characters, 500, true);
     }
 
-    Text::RenderText(textProg, std::string("Score: " + std::to_string(drone.totalScore)),
-                     255.0f, 550.0f, .5f, glm::vec3(0, 0, 0), characters, 500,
-                     true);
+    Text::RenderText(
+        textProg, std::string("Score: " + std::to_string(drone.totalScore)),
+        255.0f, 550.0f, .5f, glm::vec3(0, 0, 0), characters, 500, true);
   }
   if (!gamepad_connected) {
     // gamepad disconnnected

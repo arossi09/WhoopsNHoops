@@ -34,8 +34,6 @@ public:
         if (entities[i]->getNeedRespawn()) {
           glm::vec3 curr_pos = entities[i]->getPos();
           entities[i]->setPos(spawn_manager.get_new_spawn(curr_pos));
-          std::cout << entities[i] << " new Pos " << entities[i]->getPos().x
-                    << "\n";
           entities[i]->setNeedRespawn(false);
         }
       } else {

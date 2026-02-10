@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <iostream>
 #include "AABB.h"
+#include "Mountain.h"
 #include "Bonus.h"
 #include "Drone.h"
 #include "EntityProcess.h"
@@ -57,6 +58,7 @@ private:
   };
   Skybox skybox;
   Ocean ocean;
+	Mountain mountain_landscape;
   // scene stuff
   Scene scene;
   ResourceManager resourceManager;
@@ -67,13 +69,12 @@ private:
   std::shared_ptr<Program> texProg;
   std::shared_ptr<Program> solidProg;
   std::shared_ptr<Program> skyProg;
+  std::shared_ptr<Program> billboardProg;
   // our static geometry
 	std::shared_ptr<Shape> cube;
-	std::shared_ptr<Shape> skyscraper;
 	std::shared_ptr<Shape> mountain;
   // the image to use as a texture (ground)
 	std::shared_ptr<Texture> stylebar_sheet;
-	std::shared_ptr<Texture> lipo_texture;
 	std::map<char, Character> characters;
   float dt;
 	//Handles operating on entities

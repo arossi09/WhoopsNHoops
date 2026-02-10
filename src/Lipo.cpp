@@ -34,7 +34,6 @@ Lipo::Lipo(const std::string &resourceDirectory) {
 }
 
 // we need this to draw and transform the AABB
-// TODO create own model matrix to reposition based on local pos and draw
 void Lipo::draw(std::shared_ptr<Program> prog,
                 std::shared_ptr<MatrixStack> Model, Drone &drone) {
 

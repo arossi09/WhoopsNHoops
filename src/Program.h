@@ -18,7 +18,7 @@ public:
   bool isVerbose() const { return verbose; }
 
   void setShaderNames(const std::string &v, const std::string &f,
-                      const std::string &tcs = "",
+                      const std::string &g = "", const std::string &tcs = "",
                       const std::string &tes = "");
   virtual bool init();
   virtual void bind();
@@ -26,12 +26,14 @@ public:
 
   void addAttribute(const std::string &name);
   void addUniform(const std::string &name);
+  bool addShader(GLenum shader_type, std::string &shader_name);
   GLint getAttribute(const std::string &name) const;
   GLint getUniform(const std::string &name) const;
 
 protected:
   std::string vShaderName;
   std::string fShaderName;
+  std::string gShaderName;
   std::string tesShaderName;
   std::string tcsShaderName;
 
