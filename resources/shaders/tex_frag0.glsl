@@ -44,5 +44,8 @@ void main() {
     Outcolor = texColor0;
   }
 
+	if(Outcolor.a < 0.1f)
+		discard;
+
   Outcolor.rgb = mix(Outcolor.rgb, fogColor, fogFactor);
 }

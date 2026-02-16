@@ -241,21 +241,6 @@ void Game::init(const std::string &resourceDirectory) {
   skyProg->addUniform("skybox");
   skyProg->addAttribute("vertPos");
 
-  billboardProg = std::make_shared<Program>();
-  billboardProg->setVerbose(true);
-  billboardProg->setShaderNames(resourceDirectory + "/shaders/billboardVS.glsl",
-                                resourceDirectory + "/shaders/billboardFS.glsl",
-                                resourceDirectory +
-                                    "/shaders/billboardGS.glsl");
-
-  // program for the billboarded objects
-  billboardProg->init();
-  billboardProg->addUniform("P");
-  billboardProg->addUniform("V");
-  billboardProg->addUniform("M");
-  billboardProg->addUniform("cameraPosition");
-  billboardProg->addUniform("Texture0");
-  billboardProg->addAttribute("vertPos");
 
   /*------------Textures------------*/
   // texture for the style meter
@@ -265,7 +250,6 @@ void Game::init(const std::string &resourceDirectory) {
   stylebar_sheet->setUnit(1);
   stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
   stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
-  // texture for billboard trees
 
   /*----------Rendered Object--------*/
   // set up the scenes models, textures, and physics
@@ -438,15 +422,6 @@ void Game::render() {
                drone.position, glm::vec3(1.0f, -1.0f, 1.0f), glfwGetTime());
   Model->popMatrix();
 
-  // bind the values for billboard program
-  billboardProg->bind();
-  glUniformMatrix4fv(billboardProg->getUniform("P"), 1, GL_FALSE,
-                     value_ptr(Projection->topMatrix()));
-  glUniformMatrix4fv(billboardProg->getUniform("V"), 1, GL_FALSE,
-                     value_ptr(View->topMatrix()));
-  glUniform3fv(billboardProg->getUniform("cameraPosition"), 1,
-               value_ptr(drone.position));
-  billboardProg->unbind();
 
   // Main scene
   texProg->bind();
@@ -466,7 +441,7 @@ void Game::render() {
   Model->scale(vec3(4, 4, 4));
   // draw the scene
   scene.draw(texProg, Model->topMatrix());
-  mountain_landscape.draw(texProg, billboardProg, Model);
+  mountain_landscape.draw(texProg,  Model, drone.position);
   // draw the entities
   entityProcess.draw(texProg, Model, drone);
   Model->popMatrix();

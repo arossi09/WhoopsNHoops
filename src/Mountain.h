@@ -15,8 +15,8 @@ public:
   int init();
   void setResourceDir(const std::string &resourceDir);
   // given a shader program draws the mountain
-  int draw(std::shared_ptr<Program> prog, std::shared_ptr<Program> bill_prog,
-           std::shared_ptr<MatrixStack> Model);
+  int draw(std::shared_ptr<Program> prog, 
+           std::shared_ptr<MatrixStack> Model, glm::vec3 cameraPosition);
 
 private:
 	unsigned int VBO;
@@ -27,6 +27,6 @@ private:
   std::shared_ptr<Shape> tree_obj;
   std::shared_ptr<Texture> tree_texture;
   std::string resourceDirectory;
-  std::vector<float> tree_samples; // list of tree sample points
+  std::vector<glm::vec3> tree_samples; // list of tree sample points
 };
 #endif

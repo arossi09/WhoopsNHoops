@@ -20,24 +20,36 @@ int Mountain::init() {
   tree_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
   tree_texture->setFiltering(GL_NEAREST, GL_NEAREST);
   // load mountain obj
-  std::vector<tinyobj::shape_t> TOshapes;
-  std::vector<tinyobj::material_t> objMaterials;
+  std::vector<tinyobj::shape_t> TOshapesA;
+  std::vector<tinyobj::material_t> objMaterialsA;
   std::string errStr;
-  bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr,
+  bool rc = tinyobj::LoadObj(TOshapesA, objMaterialsA, errStr,
                              (resourceDirectory + "/landscape.obj").c_str());
   if (!rc) {
     std::cerr << errStr << std::endl;
   } else {
     mountain_obj = std::make_shared<Shape>();
-    mountain_obj->createShape(TOshapes[0]);
+    mountain_obj->createShape(TOshapesA[0]);
     mountain_obj->measure();
     mountain_obj->init();
+  }
+
+  std::vector<tinyobj::shape_t> TOshapes;
+  std::vector<tinyobj::material_t> objMaterials;
+  rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr,
+                        (resourceDirectory + "/quad.obj").c_str());
+  if (!rc) {
+    std::cerr << errStr << std::endl;
+  } else {
+    tree_obj = std::make_shared<Shape>();
+    tree_obj->createShape(TOshapes[0]);
+    tree_obj->measure();
+    tree_obj->init();
   }
   // store triangle points of of mountain obj
   std::vector<glm::vec3> mountain_tris = mountain_obj->getTris();
   sampleTreePoints(0.2f, 0.6f, mountain_tris);
   // load in tree obj
-  // load in tree texture
 
   return 0;
 }
@@ -47,7 +59,7 @@ int Mountain::init() {
 void Mountain::sampleTreePoints(float thresh_lower, float thresh_higher,
                                 std::vector<glm::vec3> tris) {
   tree_samples.clear();
-  float density = 0.15f; 
+  float density = 0.08f;
 
   for (int i = 0; i < tris.size(); i += 3) {
     glm::vec3 v0 = tris[i];
@@ -60,32 +72,16 @@ void Mountain::sampleTreePoints(float thresh_lower, float thresh_higher,
 
     if ((float)rand() / RAND_MAX < density) {
       glm::vec3 centroid = (v0 + v1 + v2) / 3.0f;
-      tree_samples.push_back(centroid.x);
-      tree_samples.push_back(centroid.y);
-      tree_samples.push_back(centroid.z);
+      tree_samples.push_back(centroid);
     }
   }
-
-  // send the tree_samples to a GPU buffer
-  glGenBuffers(1, &VBO);
-  glGenVertexArrays(1, &VAO);
-  glBindVertexArray(VAO);
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, tree_samples.size() * sizeof(float),
-               tree_samples.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-  glBindVertexArray(0);
 
   return;
 }
 
 // this function will draw the mountain along with the sampled trees
 int Mountain::draw(std::shared_ptr<Program> prog,
-                   std::shared_ptr<Program> bill_prog,
-                   std::shared_ptr<MatrixStack> Model) {
-
-  // we need to draw the trees from the VBO bounded in init
+                   std::shared_ptr<MatrixStack> Model, glm::vec3 cameraPos) {
 
   // we need to draw the mountain
   mountain_texture->bind(prog->getUniform("Texture0"));
@@ -95,21 +91,27 @@ int Mountain::draw(std::shared_ptr<Program> prog,
   glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
                      value_ptr(Model->topMatrix()));
   mountain_obj->draw(prog);
-
-  prog->unbind();
-
-  bill_prog->bind();
-  glUniformMatrix4fv(bill_prog->getUniform("M"), 1, GL_FALSE,
-                     value_ptr(Model->topMatrix()));
-
-  tree_texture->bind(bill_prog->getUniform("Texture0"));
-  glBindVertexArray(VAO);
-  glDrawArrays(GL_POINTS, 0, tree_samples.size());
-  glBindVertexArray(0);
-  bill_prog->unbind();
-
+  tree_texture->bind(prog->getUniform("Texture0"));
+  for (int i = 0; i < tree_samples.size(); i++) {
+		//we need to transfer the tree Points to world space before
+		//calculating the rotation
+		glm::vec3 worldTreePos =
+    glm::vec3(Model->topMatrix() * glm::vec4(tree_samples[i], 1.0));
+		//caclulate the angle of rotation to face the camera
+    glm::vec3 toCamera = cameraPos - worldTreePos;
+    float angle = atan2(toCamera.x, toCamera.z);
+    Model->pushMatrix();
+			//move the tree to the correct sampled point, rotate and draw
+			Model->translate(tree_samples[i]);
+			Model->rotate(angle, glm::vec3(0, 1, 0));
+			Model->scale(glm::vec3(0.3, 0.3, 0.3));
+			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
+												 value_ptr(Model->topMatrix()));
+			tree_obj->draw(prog);
+    Model->popMatrix();
+  }
   Model->popMatrix();
-  prog->bind();
+
   return 0;
 }
 
