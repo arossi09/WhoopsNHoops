@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
       game->gameOver();
     }
     // Render scene.
+		game->handleLogic();
     game->render();
     game->processKeyInput(
         game->windowManager->getHandle()); // might change this to poll

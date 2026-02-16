@@ -41,27 +41,27 @@ struct Drone {
   vec3 acceleration = vec3(0.0f);
   float mass = 250.0f;
   float camera_title_angle = 25;
+  bool armed = false;
 
   glm::vec3 droneColor = light_blue;
 
   std::string trick = "";
-	std::string oldTrick = "";
-	float styleScore = 0.0f;
-	int scoreDecayRate = 0.0f;
+  std::string oldTrick = "";
+  float styleScore = 0.0f;
+  int scoreDecayRate = 0.0f;
   int score = 0;
-	int oldScore = 0;
-	int oldTrickCount = 0;
+  int oldScore = 0;
+  int oldTrickCount = 0;
   int totalScore = 0;
   bool special_mode = false;
   float special_score_thresh = 1500.0f;
   int trickCount = 0;
-	//final stats
-	int obstaclesHit = 0;
-	int finalScore = 0;
-	int batteriesCollected = 0;
-	int totalCombos = 0;
-	int highestCombo = 0;
-
+  // final stats
+  int obstaclesHit = 0;
+  int finalScore = 0;
+  int batteriesCollected = 0;
+  int totalCombos = 0;
+  int highestCombo = 0;
 
   // prob move this to another struct
   float rollInput = 0.0f;
@@ -81,71 +81,65 @@ struct Drone {
     return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
   }
 
-	int getObstaclesHit(){
-		return obstaclesHit;
-	}
+  int getObstaclesHit() { return obstaclesHit; }
 
-	void setObstaclesHit(int num){
-		obstaclesHit = num;
-	}
+  void setObstaclesHit(int num) { obstaclesHit = num; }
 
-	int getBatteriesCollected(){
-		return batteriesCollected;
-	}
+  int getBatteriesCollected() { return batteriesCollected; }
 
-	void setBatteriesCollected(int num){
-		batteriesCollected = num;
-	}
-
+  void setBatteriesCollected(int num) { batteriesCollected = num; }
 
   void getPosition() {
     std::cout << "Drone Position: " << "x: " << position.x
               << " y: " << position.y << " z: " << position.z << '\n';
   }
 
+  void setArmed(bool state) { armed = state; }
+  bool getArmed() { return armed; }
+
   void chargeBattery() { battery = 100.0f; }
 
-	void scoreBonus(){
-		trickManager.addBonus();
-	}
+  void scoreBonus() { trickManager.addBonus(); }
 
-
-	//we need this to reset the state of the drone
-	//on gameovers
-	void reset(){
-		obstaclesHit = 0;
-		finalScore = 0;
-		batteriesCollected = 0;
-		totalCombos = 0;
-		highestCombo = 0;
-		oldScore = 0;
-		oldTrick = "";
-		oldTrickCount = 0;
-		totalScore = 0.0f;
+  // we need this to reset the state of the drone
+  // on gameovers
+  void reset() {
+    armed = false;
+    orientation = quat(1.0f, 0.0f, 0.0f, 0.0f);
+    obstaclesHit = 0;
+    finalScore = 0;
+    batteriesCollected = 0;
+    totalCombos = 0;
+    highestCombo = 0;
+    oldScore = 0;
+    oldTrick = "";
+    oldTrickCount = 0;
+    totalScore = 0.0f;
     position = glm::vec3(0.0f);
     acceleration = glm::vec3(0.0f);
     velocity = glm::vec3(0.0f);
     trickManager.reset();
-	}
+  }
 
   void endCombo() {
-		if(score > 0){
-			highestCombo = max(score, highestCombo);
-			totalScore += score;
-			finalScore = totalScore;
-			totalCombos += 1;
-			oldScore = score;
-			oldTrick = trick;
-			oldTrickCount = trickCount;
-			score = 0;
-			styleScore = 0;
-			trickManager.reset();
-		}
+    if (score > 0) {
+      highestCombo = max(score, highestCombo);
+      totalScore += score;
+      finalScore = totalScore;
+      totalCombos += 1;
+      oldScore = score;
+      oldTrick = trick;
+      oldTrickCount = trickCount;
+      score = 0;
+      styleScore = 0;
+      trickManager.reset();
+    }
   }
 
   // calculate drone physics
   void updatePosition(float dt) {
-		
+    if (!armed)
+      throttle = 0;
     battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
     battery = max(battery, 0.0f);
     if (battery > 100.0f) {
@@ -170,7 +164,6 @@ struct Drone {
     }
   }
 
-
   void updateTrickState(float dt) {
     // we need to calculate the delta angles for pitch, yaw, and
     // roll to see if we complete full rotations
@@ -187,8 +180,8 @@ struct Drone {
     vec3 up = orientation * vec3(0, 1, 0);
     trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime, &styleScore);
 
-		if(styleScore > 0)
-			styleScore -= dt * scoreDecayRate;
+    if (styleScore > 0)
+      styleScore -= dt * scoreDecayRate;
 
     // we need to set drone to special mode if above score of 3000
     if (styleScore >= special_score_thresh) {
@@ -204,16 +197,21 @@ struct Drone {
     prevorientation = orientation;
   }
 
-
-
   // we need this to be able to update the drones orientation based
   // off the inputs from the controller
   void updateOrientation(float rollVel, float pitchVel, float yawVel,
                          float deltaTime) {
+
     // Create quaternions around local axes (apply roll -> pitch ->  yaw)
-    float rollDelta = rollVel * deltaTime;
-    float pitchDelta = pitchVel * deltaTime;
-    float yawDelta = yawVel * deltaTime;
+    float rollDelta = 0;
+    float pitchDelta = 0;
+		float yawDelta = 0;
+		//if the drone is armed update the axis deltas
+    if (armed) {
+      yawDelta = yawVel * deltaTime;
+      pitchDelta = pitchVel * deltaTime;
+      rollDelta = rollVel * deltaTime;
+    }
 
     glm::quat qRoll = glm::angleAxis(rollDelta, glm::vec3(0, 0, 1)); // local Z
     glm::quat qPitch =

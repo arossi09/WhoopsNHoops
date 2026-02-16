@@ -76,14 +76,18 @@ float Game::get_rate(float stick_input, float rcRate, float superRate,
 }
 // gather the controller inputs on callback
 void Game::gamepadInputCallback(float leftX, float leftY, float rightX,
-                                float rightY, bool gamepad) {
+                                float rightY, bool left_bumper, bool gamepad) {
   gamepad_connected = gamepad;
   if (gamepad) {
+    // left bumper pressed then cycle the arm state to either armed or
+    // disarmed
+    if (left_bumper)
+      drone.setArmed(!drone.getArmed());
     // turn controller axie location into drone movement data
     drone.yawInput = -leftX;
     drone.pitchInput = rightY;
-    drone.rollInput = rightX; // clamp throttle [0, 1]
-    drone.throttle = (leftY + 1) / 2;
+    drone.rollInput = rightX;
+    drone.throttle = (leftY + 1) / 2; // clamp throttle [0, 1]
   }
 }
 
@@ -261,13 +265,7 @@ void Game::init(const std::string &resourceDirectory) {
   stylebar_sheet->setUnit(1);
   stylebar_sheet->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
   stylebar_sheet->setFiltering(GL_NEAREST, GL_NEAREST);
-	//texture for billboard trees
-  tree_texture = std::make_shared<Texture>();
-  tree_texture->setFilename(resourceDirectory + "/billboard_tree.png");
-  tree_texture->init();
-  tree_texture->setUnit(3);
-  tree_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-  tree_texture->setFiltering(GL_NEAREST, GL_NEAREST);
+  // texture for billboard trees
 
   /*----------Rendered Object--------*/
   // set up the scenes models, textures, and physics
@@ -357,7 +355,39 @@ void Game::resize_and_center(vec3 gMin, vec3 gMax,
   Model->scale(vec3(scale, scale, scale));
 }
 
-// TODO void Game::handleGameLogic()
+// function to handle logic calls
+void Game::handleLogic() {
+  // update Drone sates
+  /*if (!drone.getArmed()) {
+    drone.yawInput = 0;
+    drone.pitchInput = 0;
+    drone.rollInput = 0;
+    drone.throttle = 0;
+  } */
+  float yawVel =
+      get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
+  float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
+  float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
+  
+
+  // Update Camera Based on Flags
+  if (goCamera_flag) {
+    updateUsingCameraPath(dt);
+
+  } else if (gameOverFlag) {
+    updateUsingCameraPath(dt);
+  } else {
+    if (!debugCam_flag) {
+      drone.updatePosition(dt);
+    }
+    drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
+    drone.updateTrickState(dt);
+  }
+
+  entityProcess.update(dt, drone);
+  physicsWorld.handleDroneCollisions(drone);
+  Physics::clampToWorld(worldBox, drone);
+}
 
 /*function to render the scene, dt is delta time*/
 void Game::render() {
@@ -374,26 +404,6 @@ void Game::render() {
   auto Projection = std::make_shared<MatrixStack>();
   auto View = std::make_shared<MatrixStack>();
   auto Model = std::make_shared<MatrixStack>();
-
-  // update Drone sates
-  float yawVel =
-      get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
-  float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
-  float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
-
-  // Update Camera Based on Flags
-  if (goCamera_flag) {
-    updateUsingCameraPath(dt);
-
-  } else if (gameOverFlag) {
-    updateUsingCameraPath(dt);
-  } else {
-    if (!debugCam_flag) {
-      drone.updatePosition(dt);
-    }
-    drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
-    drone.updateTrickState(dt);
-  }
 
   // Apply perspective projection.
   Projection->pushMatrix();
@@ -436,7 +446,6 @@ void Game::render() {
                      value_ptr(View->topMatrix()));
   glUniform3fv(billboardProg->getUniform("cameraPosition"), 1,
                value_ptr(drone.position));
-  tree_texture->bind(billboardProg->getUniform("Texture0"));
   billboardProg->unbind();
 
   // Main scene
@@ -452,7 +461,6 @@ void Game::render() {
   glUniform1i(texProg->getUniform("lightToggle"), 1);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
   Model->pushMatrix();
   Model->translate(vec3(0, 2, 0));
   Model->scale(vec3(4, 4, 4));
@@ -461,14 +469,8 @@ void Game::render() {
   mountain_landscape.draw(texProg, billboardProg, Model);
   // draw the entities
   entityProcess.draw(texProg, Model, drone);
-  entityProcess.update(dt, drone); // TODO move this somewhere else
-                                   // TODO mountain.draw()
-  // handle the drone collisions among all colliders
-  physicsWorld.handleDroneCollisions(drone); // TODO move this somewhere else
   Model->popMatrix();
   texProg->unbind();
-  /*we need this to restrict drone to worldBox*/
-  Physics::clampToWorld(worldBox, drone);
 
   /*all of the text*/
   textProg->bind();

@@ -41,7 +41,7 @@ public:
 	virtual void resizeCallback(GLFWwindow *window, int in_width, int in_height) = 0;
 
 	virtual void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) = 0;
-  virtual void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY, bool gamepad_connected) = 0;
+  virtual void gamepadInputCallback(float leftX, float leftY, float rightX, float rightY, bool left_bumper, bool gamepad_connected) = 0;
 };
 
 // This class is responsible for all window management code, i.e. GLFW3 code
@@ -73,6 +73,7 @@ protected:
 
 	GLFWwindow *windowHandle = nullptr;
 	EventCallbacks *callbacks = nullptr;
+	bool previousLeftBumperState = false;
 
 private:
 

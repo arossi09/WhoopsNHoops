@@ -1,10 +1,6 @@
 #ifndef GAME_H
 #define GAME_H
-#include <chrono>
-#include <glad/glad.h>
-#include <iostream>
 #include "AABB.h"
-#include "Mountain.h"
 #include "Bonus.h"
 #include "Drone.h"
 #include "EntityProcess.h"
@@ -12,6 +8,7 @@
 #include "Hud.h"
 #include "Lipo.h"
 #include "MatrixStack.h"
+#include "Mountain.h"
 #include "OBB.h"
 #include "Physics.h"
 #include "PhysicsWorld.h"
@@ -25,6 +22,9 @@
 #include "WindowManager.h"
 #include "ocean.h"
 #include "skybox.h"
+#include <chrono>
+#include <glad/glad.h>
+#include <iostream>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
@@ -37,16 +37,18 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-class Game : public EventCallbacks{
+class Game : public EventCallbacks {
 public:
   WindowManager *windowManager = nullptr;
   void init(const std::string &resourceDirectory);
   void initGeom(const std::string &resourceDirectory);
   void calculateDeltaTime();
   void gameOver();
-	void render();
+  void render();
+	void handleLogic();
   void processKeyInput(GLFWwindow *window);
-	Drone* getDrone();
+  Drone *getDrone();
+
 private:
   // Hud elements
   Hud hud;
@@ -58,7 +60,7 @@ private:
   };
   Skybox skybox;
   Ocean ocean;
-	Mountain mountain_landscape;
+  Mountain mountain_landscape;
   // scene stuff
   Scene scene;
   ResourceManager resourceManager;
@@ -71,31 +73,30 @@ private:
   std::shared_ptr<Program> skyProg;
   std::shared_ptr<Program> billboardProg;
   // our static geometry
-	std::shared_ptr<Shape> cube;
-	std::shared_ptr<Shape> mountain;
+  std::shared_ptr<Shape> cube;
+  std::shared_ptr<Shape> mountain;
   // the image to use as a texture (ground)
-	std::shared_ptr<Texture> stylebar_sheet;
-	std::shared_ptr<Texture> tree_texture;
-	std::map<char, Character> characters;
+  std::shared_ptr<Texture> stylebar_sheet;
+  std::map<char, Character> characters;
   float dt;
-	//Handles operating on entities
+  // Handles operating on entities
   EntityProcess entityProcess;
   // lipo batteries
   std::shared_ptr<Lipo> lipo1;
   std::shared_ptr<Lipo> lipo2;
   std::shared_ptr<Lipo> lipo3;
-	// Bonus pickups
+  // Bonus pickups
   std::shared_ptr<Bonus> bonus1;
   std::shared_ptr<Bonus> bonus2;
   std::shared_ptr<Bonus> bonus3;
-	//variables used for camera positing
-  vec3 gPos;//global Pos
+  // variables used for camera positing
+  vec3 gPos; // global Pos
   vec3 gCenter = vec3(0, 0, 0);
   float radius = 100;
   float phi = 0.0f;
-	float elapsedTime = 0.0f;
+  float elapsedTime = 0.0f;
   float theta = PI / 2;
-  float camera_sensitivity = .1; 
+  float camera_sensitivity = .1;
   // gamepad
   bool gamepad_connected = false;
   float yawDelta = 0;
@@ -107,13 +108,13 @@ private:
   float cTheta = 0;
   float eTheta = 0;
   float hTheta = 0;
-	float textFallY = 0.0f;
-	float text_fallSpeed = 30.0f;
+  float textFallY = 0.0f;
+  float text_fallSpeed = 30.0f;
   bool debugCam_flag = false;
   bool hud_flag = true;
   bool goCamera_flag = true;
   bool gameOverFlag = false;
-	//camera spline animation
+  // camera spline animation
   Spline splinepath[3];
   int currentSpline = 0;
   int numSplines = 3;
@@ -126,8 +127,8 @@ private:
   void mouseCallback(GLFWwindow *window, int button, int action, int mods);
   void scrollCallback(GLFWwindow *window, double deltaX, double deltaY);
   void gamepadInputCallback(float leftX, float leftY, float rightX,
-                            float rightY, bool gamepad);
-	void resizeCallback(GLFWwindow *window, int width, int height);
+                            float rightY, bool left_bumper, bool gamepad);
+  void resizeCallback(GLFWwindow *window, int width, int height);
   float get_rate(float stick_input, float rcRate, float superRate,
                  float baseDegPerSec = 200.0f);
   void updateCamera(std::shared_ptr<MatrixStack> &view, Drone &drone);
@@ -135,7 +136,8 @@ private:
   void updateCamera(std::shared_ptr<MatrixStack> &view, vec3 drone_position,
                     quat drone_orientation, float drone_camera_angle);
   void setModel(std::shared_ptr<Program> prog, std::shared_ptr<MatrixStack> M);
-  void resize_and_center(vec3 gMin, vec3 gMax, std::shared_ptr<MatrixStack> Model);
+  void resize_and_center(vec3 gMin, vec3 gMax,
+                         std::shared_ptr<MatrixStack> Model);
   void restartGame();
 };
 

@@ -21,7 +21,7 @@ public:
 private:
 	unsigned int VBO;
 	unsigned int VAO;
-  void sampleTreePoints(float thresh, std::vector<glm::vec3> tris);
+	void sampleTreePoints(float thresh_lower, float thresh_higher, std::vector<glm::vec3> tris);
   std::shared_ptr<Shape> mountain_obj;
   std::shared_ptr<Texture> mountain_texture;
   std::shared_ptr<Shape> tree_obj;

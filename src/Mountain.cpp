@@ -12,6 +12,13 @@ int Mountain::init() {
   mountain_texture->setUnit(0);
   mountain_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
   mountain_texture->setFiltering(GL_NEAREST, GL_NEAREST);
+
+  tree_texture = std::make_shared<Texture>();
+  tree_texture->setFilename(resourceDirectory + "/billboard_tree.png");
+  tree_texture->init();
+  tree_texture->setUnit(0);
+  tree_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+  tree_texture->setFiltering(GL_NEAREST, GL_NEAREST);
   // load mountain obj
   std::vector<tinyobj::shape_t> TOshapes;
   std::vector<tinyobj::material_t> objMaterials;
@@ -28,7 +35,7 @@ int Mountain::init() {
   }
   // store triangle points of of mountain obj
   std::vector<glm::vec3> mountain_tris = mountain_obj->getTris();
-  sampleTreePoints(2.0f, mountain_tris);
+  sampleTreePoints(0.2f, 0.6f, mountain_tris);
   // load in tree obj
   // load in tree texture
 
@@ -37,37 +44,35 @@ int Mountain::init() {
 
 // we need this function to be able to sample points on the
 // mountain to draw trees given a threshold
-void Mountain::sampleTreePoints(float thresh, std::vector<glm::vec3> tris) {
-	tree_samples.clear();
-  /*for (int i = 0; i < tris.size(); i += 3) {
-    // need to put these in world cordiantes
+void Mountain::sampleTreePoints(float thresh_lower, float thresh_higher,
+                                std::vector<glm::vec3> tris) {
+  tree_samples.clear();
+  float density = 0.15f; 
+
+  for (int i = 0; i < tris.size(); i += 3) {
     glm::vec3 v0 = tris[i];
     glm::vec3 v1 = tris[i + 1];
     glm::vec3 v2 = tris[i + 2];
 
-    // load point in model space so later in the draw call we can move
-    // the point related to where the mountain is transformed
-    float ax = (v0.x + v1.x + v2.x) / 3.0f;
     float ay = (v0.y + v1.y + v2.y) / 3.0f;
-    float az = (v0.z + v1.z + v2.z) / 3.0f;
-    if (ay >= thresh) {
-      tree_samples.push_back(ax);
-      tree_samples.push_back(ay);
-      tree_samples.push_back(az);
-    }
-  }*/
+    if (ay < thresh_lower || ay > thresh_higher)
+      continue;
 
-	tree_samples.push_back(1.0f);
-	tree_samples.push_back(1.0f);
-	tree_samples.push_back(1.0f);
+    if ((float)rand() / RAND_MAX < density) {
+      glm::vec3 centroid = (v0 + v1 + v2) / 3.0f;
+      tree_samples.push_back(centroid.x);
+      tree_samples.push_back(centroid.y);
+      tree_samples.push_back(centroid.z);
+    }
+  }
 
   // send the tree_samples to a GPU buffer
   glGenBuffers(1, &VBO);
   glGenVertexArrays(1, &VAO);
   glBindVertexArray(VAO);
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, tree_samples.size() * sizeof(float), tree_samples.data(),
-               GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, tree_samples.size() * sizeof(float),
+               tree_samples.data(), GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
   glBindVertexArray(0);
@@ -81,18 +86,8 @@ int Mountain::draw(std::shared_ptr<Program> prog,
                    std::shared_ptr<MatrixStack> Model) {
 
   // we need to draw the trees from the VBO bounded in init
-  bill_prog->bind();
-		Model->pushMatrix();
-		glUniformMatrix4fv(bill_prog->getUniform("M"), 1, GL_FALSE,
-											 value_ptr(Model->topMatrix()));
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, 1);
-		glBindVertexArray(0);
-		Model->popMatrix();
-  bill_prog->unbind();
 
   // we need to draw the mountain
-  prog->bind();
   mountain_texture->bind(prog->getUniform("Texture0"));
   Model->pushMatrix();
   Model->translate(glm::vec3(-4, -30, 0));
@@ -100,9 +95,21 @@ int Mountain::draw(std::shared_ptr<Program> prog,
   glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,
                      value_ptr(Model->topMatrix()));
   mountain_obj->draw(prog);
+
+  prog->unbind();
+
+  bill_prog->bind();
+  glUniformMatrix4fv(bill_prog->getUniform("M"), 1, GL_FALSE,
+                     value_ptr(Model->topMatrix()));
+
+  tree_texture->bind(bill_prog->getUniform("Texture0"));
+  glBindVertexArray(VAO);
+  glDrawArrays(GL_POINTS, 0, tree_samples.size());
+  glBindVertexArray(0);
+  bill_prog->unbind();
+
   Model->popMatrix();
-  // TODO draw mountain
-  // TODO loop through sampled points and draw trees with billboard program
+  prog->bind();
   return 0;
 }
 
