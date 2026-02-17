@@ -342,12 +342,6 @@ void Game::resize_and_center(vec3 gMin, vec3 gMax,
 // function to handle logic calls
 void Game::handleLogic() {
   // update Drone sates
-  /*if (!drone.getArmed()) {
-    drone.yawInput = 0;
-    drone.pitchInput = 0;
-    drone.rollInput = 0;
-    drone.throttle = 0;
-  } */
   float yawVel =
       get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
   float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
