@@ -155,6 +155,7 @@ bool TrickStateMachine::handleFlip(float dPitch, const glm::vec3 &up, float dt,
       state = TrickStage::NONE;
     }
   }
+	return false;
 }
 
 /*

@@ -241,7 +241,6 @@ void Game::init(const std::string &resourceDirectory) {
   skyProg->addUniform("skybox");
   skyProg->addAttribute("vertPos");
 
-
   /*------------Textures------------*/
   // texture for the style meter
   stylebar_sheet = std::make_shared<Texture>();
@@ -267,8 +266,12 @@ void Game::init(const std::string &resourceDirectory) {
   hud.init();
   hud.addSprite(style_meter);
 
+  soundManager.setResourceDir(resourceDirectory);
+  soundManager.init();
+
   skybox.setFaces(faces);
   skybox.init();
+
 
   mountain_landscape.setResourceDir(resourceDirectory);
   mountain_landscape.init();
@@ -346,7 +349,6 @@ void Game::handleLogic() {
       get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
   float pitchVel = get_rate(drone.pitchInput, drone.rcRate, drone.superRate);
   float rollVel = get_rate(drone.rollInput, drone.rcRate, drone.superRate);
-  
 
   // Update Camera Based on Flags
   if (goCamera_flag) {
@@ -363,7 +365,9 @@ void Game::handleLogic() {
   }
 
   entityProcess.update(dt, drone);
-  physicsWorld.handleDroneCollisions(drone);
+  // TODO may be too weird passing sound manager to stuff that needs to
+  // be played
+  physicsWorld.handleDroneCollisions(drone, soundManager);
   Physics::clampToWorld(worldBox, drone);
 }
 
@@ -416,7 +420,6 @@ void Game::render() {
                drone.position, glm::vec3(1.0f, -1.0f, 1.0f), glfwGetTime());
   Model->popMatrix();
 
-
   // Main scene
   texProg->bind();
   glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE,
@@ -435,7 +438,7 @@ void Game::render() {
   Model->scale(vec3(4, 4, 4));
   // draw the scene
   scene.draw(texProg, Model->topMatrix());
-  mountain_landscape.draw(texProg,  Model, drone.position);
+  mountain_landscape.draw(texProg, Model, drone.position);
   // draw the entities
   entityProcess.draw(texProg, Model, drone);
   Model->popMatrix();

@@ -63,7 +63,8 @@ std::shared_ptr<Texture> ResourceManager::getTexture(const std::string &name,
   tex->setFilename(path);
   tex->init();
   tex->setUnit(0);
-  tex->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+  //tex->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+  tex->setWrapModes(GL_REPEAT, GL_REPEAT);//maybe have option in json for this
   tex->setFiltering(GL_NEAREST, GL_NEAREST);
   textureCache[name] = tex;
   return tex;

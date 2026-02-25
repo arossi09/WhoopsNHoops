@@ -333,8 +333,8 @@
 			"model": "ground.obj",
 			"texture": "tileblock.png",
 			"position": [-95, 1, -70],
-			"rotation": [0, -45, 0],
-			"scale": [50, 20, 50],
+			"rotation": [0, -35, 0],
+			"scale": [50, 40, 50],
 			"static": true
 		},
 		{

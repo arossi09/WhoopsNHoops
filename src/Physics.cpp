@@ -1,16 +1,17 @@
 #include "Physics.h"
 
 namespace Physics {
-void handleCollision(const AABB &box, Drone &drone) {
+void handleCollision(const AABB &box, Drone &drone, SoundManager &sm) {
   AABB droneBox = drone.getAABB();
 
-  if(distance(drone.position, box.getCenter())< 200){
-		if (droneBox.intersects(box)) {
-			resolveAABBCollision(box, drone);
-			drone.endCombo();
-			drone.setObstaclesHit(drone.getObstaclesHit() + 1);
-		}
-	}
+  if (distance(drone.position, box.getCenter()) < 200) {
+    if (droneBox.intersects(box)) {
+      resolveAABBCollision(box, drone);
+      drone.endCombo();
+      drone.setObstaclesHit(drone.getObstaclesHit() + 1);
+      sm.play(CRASH);
+    }
+  }
 }
 
 void handleCollision(const OBB &box, Drone &drone, glm::mat4 &model) {

@@ -11,8 +11,8 @@ void PhysicsWorld::addSceneObject(SceneObject &obj) {
     addColider(c);
   }
 }
-void PhysicsWorld::handleDroneCollisions(Drone &drone) {
+void PhysicsWorld::handleDroneCollisions(Drone &drone, SoundManager &sm) {
   for (auto &collider : colliders) {
-    Physics::handleCollision(*collider, drone);
+    Physics::handleCollision(*collider, drone, sm);
   }
 }

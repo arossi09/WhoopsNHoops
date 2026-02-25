@@ -10,6 +10,9 @@ freetype
 glm
 glew
 OpenGL
+OpenAL
+homebrew:
+openal-soft and libsnfile
 
 To run:
 mkdir build
@@ -34,6 +37,8 @@ https://docs.spacestation14.com/en/ss14-by-example/adding-a-simple-bikehorn.html
 - velocity particle lines for speed
 - vertex coloring for baked lighting
 - point lights?
+
+- sound manager
 
 
 

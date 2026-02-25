@@ -8,6 +8,9 @@ project(WhoopsnHoops)
 set(CMAKE_CXX_STANDARD_REQUIRED 17)
 set(CMAKE_CXX_STANDARD 17)
 
+#for compiler commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Use glob to get the list of all source files.
 file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp" "${CMAKE_SOURCE_DIR}/ext/*/*.cpp" "${CMAKE_SOURCE_DIR}/ext/glad/src/*.c")
 
@@ -18,9 +21,17 @@ file(GLOB_RECURSE GLSL "resources/*.glsl")
 
 #Find and configure FreeType
 find_package(Freetype REQUIRED)
+find_package(OpenAL REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(SndFIle REQUIRED)
+
+#Find and configure OpenAL
+
+#For cmake to find openal-soft you may need to set:
+# export CMAKE_PREFIX_PATH="/opt/homebrew/opt/openal-soft"
+
 # Include directories (only system ones)
 
-include_directories(${FREETYPE_INCLUDE_DIRS})
 include_directories("ext")
 include_directories("ext/glad/include")
 
@@ -44,7 +55,8 @@ if(NOT WIN32)
   # TODO: The following links may be uneeded. 
   if(APPLE)
     # Add required frameworks for GLFW.
-    target_link_libraries(${CMAKE_PROJECT_NAME} "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo" ${FREETYPE_LIBRARIES})
+		target_link_libraries(${CMAKE_PROJECT_NAME} SndFile::sndfile glfw OpenGL::GL OpenAL::OpenAL Freetype::Freetype)
+		#target_link_libraries(${CMAKE_PROJECT_NAME} "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo" ${OPENAL_LIBRARY} ${FREETYPE_LIBRARIES})
   else()
     #Link the Linux OpenGL library
     target_link_libraries(${CMAKE_PROJECT_NAME} "GL" "dl" ${FREETYPE_LIBRARIES})

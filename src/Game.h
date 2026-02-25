@@ -16,6 +16,7 @@
 #include "ResourceManager.h"
 #include "Scene.h"
 #include "Shape.h"
+#include "SoundManager.h"
 #include "Spline.h"
 #include "Text.h"
 #include "Texture.h"
@@ -45,7 +46,7 @@ public:
   void calculateDeltaTime();
   void gameOver();
   void render();
-	void handleLogic();
+  void handleLogic();
   void processKeyInput(GLFWwindow *window);
   Drone *getDrone();
 
@@ -65,6 +66,7 @@ private:
   Scene scene;
   ResourceManager resourceManager;
   PhysicsWorld physicsWorld;
+  SoundManager soundManager;
   // render class
   // Our shader programs
   std::shared_ptr<Program> textProg;
