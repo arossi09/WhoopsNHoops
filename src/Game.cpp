@@ -766,6 +766,8 @@ void Game::render() {
 void Game::gameOver() {
   drone.chargeBattery();
   drone.endCombo();
+	drone.setArmed(false);
+	soundManager.stop(DRONE_PROPELLER);
   gameOverFlag = true;
 }
 
