@@ -34,6 +34,11 @@ void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action,
     }
   }
 
+  if (key == GLFW_KEY_O && action == GLFW_PRESS) {
+    soundManager.play(DRONE_PROPELLER);
+		drone.setArmed(!drone.getArmed());
+  }
+
   if (key == GLFW_KEY_H && action == GLFW_PRESS) {
     hud_flag = !hud_flag;
   }
@@ -81,13 +86,25 @@ void Game::gamepadInputCallback(float leftX, float leftY, float rightX,
   if (gamepad) {
     // left bumper pressed then cycle the arm state to either armed or
     // disarmed
-    if (left_bumper)
+    if (left_bumper) {
+      if (drone.getArmed()){
+        soundManager.play(DRONE_DISARM);
+      	soundManager.stop(DRONE_PROPELLER);
+			}
+      else{
+      	soundManager.play(DRONE_PROPELLER);
+        soundManager.play(DRONE_ARM);
+			}
+
       drone.setArmed(!drone.getArmed());
+    }
     // turn controller axie location into drone movement data
     drone.yawInput = -leftX;
     drone.pitchInput = rightY;
     drone.rollInput = rightX;
     drone.throttle = (leftY + 1) / 2; // clamp throttle [0, 1]
+		//drone pitch
+		soundManager.changeSoundPitch(DRONE_PROPELLER, max(drone.throttle+0.5, 0.6));
   }
 }
 
@@ -272,7 +289,6 @@ void Game::init(const std::string &resourceDirectory) {
   skybox.setFaces(faces);
   skybox.init();
 
-
   mountain_landscape.setResourceDir(resourceDirectory);
   mountain_landscape.init();
 
@@ -362,9 +378,9 @@ void Game::handleLogic() {
     }
     drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
     drone.updateTrickState(dt);
+    entityProcess.update(dt, drone, soundManager);
   }
 
-  entityProcess.update(dt, drone);
   // TODO may be too weird passing sound manager to stuff that needs to
   // be played
   physicsWorld.handleDroneCollisions(drone, soundManager);
@@ -494,6 +510,7 @@ void Game::render() {
   } else if (!goCamera_flag && !gameOverFlag && hud_flag) {
     // main hud
     int speed = static_cast<int>(length(drone.velocity));
+    glm::vec3 batLevelColor{};
 
     // render information in bottom left
     Text::RenderText(textProg, std::string("SPEED: " + std::to_string(speed)),
@@ -501,10 +518,17 @@ void Game::render() {
                      characters);
     Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f,
                      glm::vec3(0.5, 0.8f, 0.2f), characters);
+    if (drone.battery >= 75)
+      batLevelColor = {0.5, 0.8f, 0.2f};
+    else if (drone.battery >= 50)
+      batLevelColor = {1.0f, 0.8f, 0.0f};
+    else if (drone.battery >= 0)
+      batLevelColor = {1.0f, 0.0f, 0.0f};
+
     Text::RenderText(
         textProg,
         std::string("BAT: " + std::to_string(static_cast<int>(drone.battery))),
-        25.0f, 125.0f, .75f, glm::vec3(0.5, 0.8f, 0.2f), characters);
+        25.0f, 125.0f, .75f,  batLevelColor, characters);
 
     // render score & trick description
     if (drone.trickCount > 0) {

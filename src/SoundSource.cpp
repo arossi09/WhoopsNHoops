@@ -16,6 +16,8 @@ SoundSource::SoundSource() {
 
 SoundSource::~SoundSource() { alDeleteSources(1, &p_Source); }
 
+void SoundSource::loopSound() { alSourcei(p_Source, AL_LOOPING, true); }
+
 void SoundSource::play(const ALuint buffer_to_play) {
   if (buffer_to_play != p_Buffer) {
     p_Buffer = buffer_to_play;
@@ -24,3 +26,11 @@ void SoundSource::play(const ALuint buffer_to_play) {
 
   alSourcePlay(p_Source);
 }
+
+void SoundSource::stop(const ALuint buffer_to_stop) {
+  alSourceStop(p_Source);
+}
+
+
+float SoundSource::getPitch() { return p_Pitch; }
+void SoundSource::setPitch(float val) { p_Pitch = val; alSourcef(p_Source, AL_PITCH, p_Pitch);}

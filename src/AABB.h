@@ -14,6 +14,7 @@ class AABB{
         glm::vec3 originalMin;
         glm::vec3 originalMax;
         bool collide = true;
+				std::string name;
 
 
 

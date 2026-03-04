@@ -6,6 +6,10 @@ public:
   SoundSource();
   ~SoundSource();
   void play(const ALuint buffer_to_play);
+	void stop(const ALuint buffer_to_stop);
+	void loopSound();
+	void setPitch(float new_pitch);
+	float getPitch();
 
 private:
   ALuint p_Source;

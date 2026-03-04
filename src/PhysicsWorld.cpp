@@ -12,7 +12,16 @@ void PhysicsWorld::addSceneObject(SceneObject &obj) {
   }
 }
 void PhysicsWorld::handleDroneCollisions(Drone &drone, SoundManager &sm) {
+  // track if the drone was intersecting the previous frame
+	const bool wasTouching = drone.getTouchingCollider();
+	bool touchingThisFrame = false;
+	bool crashTriggeredThisFrame = false;
+  //drone.setWasTouching(drone.getTouchingCollider());
+  //bool collided_this_frame = false;
   for (auto &collider : colliders) {
-    Physics::handleCollision(*collider, drone, sm);
+    // if the drone collided this frame save that
+    bool hit = Physics::handleCollision(*collider, drone, sm, wasTouching, crashTriggeredThisFrame);
+		touchingThisFrame = touchingThisFrame || hit;
   }
+	drone.setTouchingCollider(touchingThisFrame);
 }

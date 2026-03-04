@@ -61,6 +61,7 @@ void SceneObject::setupColliders() {
 
   for (auto &shape : mesh->shapes) {
     auto box = std::make_shared<AABB>(shape->min, shape->max);
+		box->name = name;
     box->transform(model);
     colliders.push_back(box);
   }

@@ -5,9 +5,10 @@
 #include "SoundManager.h"
 
 namespace Physics {
-void handleCollision(const AABB &box, Drone &drone,
+bool handleCollision(const AABB &box, Drone &drone,
                      SoundManager &sm);
-void handleCollision(const OBB &box, Drone &drone, glm::mat4 &model);
+
+bool handleCollision(const AABB &box, Drone &drone, SoundManager &sm, bool wasTouching, bool &crashTriggeredThisFrame);
 void clampToWorld(const AABB &worldBox, Drone &drone);
 void resolveAABBCollision(const AABB &box, Drone &drone);
 } // namespace Physics

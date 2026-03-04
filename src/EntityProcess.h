@@ -1,5 +1,6 @@
 // in charge of holding entities and operating on them
 #include "Entity.h"
+#include "SoundManager.h"
 #include "SpawnManager.h"
 #include <iostream>
 
@@ -22,16 +23,17 @@ public:
 
   // we need to loop through entities and see if they intersect with drone in
   // order to do their update state
-  void update(float dt, Drone &drone) {
+  void update(float dt, Drone &drone, SoundManager &sm) {
     AABB droneAABB = drone.getAABB();
     for (int i = 0; i < entities.size(); i++) {
       if (entities[i] && entities[i]->getAABB()) {
         if (entities[i]->getAABB()->intersects(droneAABB)) {
           entities[i]->update(dt, drone);
         }
-				//we need pull new spawn for entity from spawn manager if
-				//the entity needs a respawn
+        // we need pull new spawn for entity from spawn manager if
+        // the entity needs a respawn
         if (entities[i]->getNeedRespawn()) {
+					sm.play(BATTERY_PICKUP);
           glm::vec3 curr_pos = entities[i]->getPos();
           entities[i]->setPos(spawn_manager.get_new_spawn(curr_pos));
           entities[i]->setNeedRespawn(false);

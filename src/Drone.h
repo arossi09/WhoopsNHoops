@@ -75,11 +75,20 @@ struct Drone {
   float dYaw = 0.0f;
   float dRoll = 0.0f;
   float maxTricktime = 2;
+  bool touching_collider = false;
+  bool was_touching = false;
 
   AABB getAABB() const {
     float halfSize = .7f;
     return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
   }
+
+  bool getWasTouching() { return was_touching; }
+
+  void setWasTouching(bool val) { was_touching = val; }
+  bool getTouchingCollider() { return touching_collider; }
+
+  void setTouchingCollider(bool val) { touching_collider = val; }
 
   int getObstaclesHit() { return obstaclesHit; }
 
@@ -205,8 +214,8 @@ struct Drone {
     // Create quaternions around local axes (apply roll -> pitch ->  yaw)
     float rollDelta = 0;
     float pitchDelta = 0;
-		float yawDelta = 0;
-		//if the drone is armed update the axis deltas
+    float yawDelta = 0;
+    // if the drone is armed update the axis deltas
     if (armed) {
       yawDelta = yawVel * deltaTime;
       pitchDelta = pitchVel * deltaTime;

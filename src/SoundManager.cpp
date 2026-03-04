@@ -5,13 +5,39 @@
 // device and contexg as well as load each
 // sound file into the buffer
 bool SoundManager::init() {
-  //p_SoundDevice = SoundDevice::get();
+  // p_SoundDevice = SoundDevice::get();
   p_CrashSound = SoundBuffer::get()->addSoundEffect(
       (p_ResourceDir + "/sounds/crash.wav").c_str());
+  p_BatteryPickupSound = SoundBuffer::get()->addSoundEffect(
+      (p_ResourceDir + "/sounds/entity_pickup.wav").c_str());
+  p_DroneSound = SoundBuffer::get()->addSoundEffect(
+      (p_ResourceDir + "/sounds/drone16.wav").c_str());
+  p_DroneArmSound = SoundBuffer::get()->addSoundEffect(
+      (p_ResourceDir + "/sounds/arm.wav").c_str());
+  p_DroneDisarmSound = SoundBuffer::get()->addSoundEffect(
+      (p_ResourceDir + "/sounds/disarm.wav").c_str());
+  p_DroneSoundSource.loopSound();
   // TODO set up other sounds
   return 1;
 }
 
+void SoundManager::changeSoundPitch(SoundEffect sound, float pitch) {
+  switch (sound) {
+  case DRONE_PROPELLER:
+    p_DroneSoundSource.setPitch(pitch);
+    break;
+  case CRASH:
+    break;
+  case BATTERY_PICKUP:
+    break;
+  case DRONE_ARM:
+    break;
+  case DRONE_DISARM:
+    break;
+  case BONUS_PICKUP:
+    break;
+  }
+}
 void SoundManager::setResourceDir(const std::string &resourceDir) {
   p_ResourceDir = resourceDir;
 }
@@ -20,15 +46,39 @@ void SoundManager::setResourceDir(const std::string &resourceDir) {
 // enum defined in soundmanager.h and play the correlating
 // sound from the sound buffer
 void SoundManager::play(SoundEffect sound) {
-  // TODO handle other cases sounds
   switch (sound) {
   case DRONE_PROPELLER:
+    p_DroneSoundSource.play(p_DroneSound);
     break;
   case CRASH:
-		printf("Playing Crash Sound\n");
-    p_SoundSource.play(p_CrashSound);
+    p_SoundSource1.play(p_CrashSound);
     break;
   case BATTERY_PICKUP:
+    p_SoundSource2.play(p_BatteryPickupSound);
+    break;
+  case BONUS_PICKUP:
+    break;
+  case DRONE_ARM:
+    p_SoundSource1.play(p_DroneArmSound);
+    break;
+  case DRONE_DISARM:
+    p_SoundSource1.play(p_DroneDisarmSound);
+    break;
+  }
+}
+
+void SoundManager::stop(SoundEffect sound) {
+  switch (sound) {
+  case DRONE_PROPELLER:
+    p_DroneSoundSource.stop(p_DroneSound);
+    break;
+  case CRASH:
+    break;
+  case BATTERY_PICKUP:
+    break;
+  case DRONE_ARM:
+    break;
+  case DRONE_DISARM:
     break;
   case BONUS_PICKUP:
     break;

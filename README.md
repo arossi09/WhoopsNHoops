@@ -42,4 +42,8 @@ https://docs.spacestation14.com/en/ss14-by-example/adding-a-simple-bikehorn.html
 
 
 
-
+QOL
+- obstacles so they can be flown through
+- difficulty scales and track time alive
+- more spawns
+- UI for joysticks
