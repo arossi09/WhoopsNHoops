@@ -128,6 +128,6 @@ vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
   specular *= R;
 	*/
 
-  return (ambient + diffuse + specular);
+  return (ambient + diffuse /*+ specular*/);
 }
 

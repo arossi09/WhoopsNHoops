@@ -6,6 +6,8 @@
 #include "EntityProcess.h"
 #include "GLSL.h"
 #include "Hud.h"
+#include <sstream>
+#include <iomanip>
 #include "Lipo.h"
 #include "MatrixStack.h"
 #include "Mountain.h"
@@ -87,6 +89,8 @@ private:
   std::shared_ptr<Lipo> lipo1;
   std::shared_ptr<Lipo> lipo2;
   std::shared_ptr<Lipo> lipo3;
+  std::shared_ptr<Lipo> lipo4;
+  std::shared_ptr<Lipo> lipo5;
   // Bonus pickups
   std::shared_ptr<Bonus> bonus1;
   std::shared_ptr<Bonus> bonus2;
@@ -116,10 +120,13 @@ private:
   bool hud_flag = true;
   bool goCamera_flag = true;
   bool gameOverFlag = false;
+	float timeAlive = 0.0f;
+	int difficultyLevel = 0;
   // camera spline animation
   Spline splinepath[3];
   int currentSpline = 0;
   int numSplines = 3;
+	
 
   Drone drone;
   AABB worldBox = AABB(vec3(-170, -20, -170), vec3(170, 200, 250));

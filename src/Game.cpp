@@ -36,7 +36,7 @@ void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action,
 
   if (key == GLFW_KEY_O && action == GLFW_PRESS) {
     soundManager.play(DRONE_PROPELLER);
-		drone.setArmed(!drone.getArmed());
+    drone.setArmed(!drone.getArmed());
   }
 
   if (key == GLFW_KEY_H && action == GLFW_PRESS) {
@@ -87,14 +87,13 @@ void Game::gamepadInputCallback(float leftX, float leftY, float rightX,
     // left bumper pressed then cycle the arm state to either armed or
     // disarmed
     if (left_bumper) {
-      if (drone.getArmed()){
+      if (drone.getArmed()) {
         soundManager.play(DRONE_DISARM);
-      	soundManager.stop(DRONE_PROPELLER);
-			}
-      else{
-      	soundManager.play(DRONE_PROPELLER);
+        soundManager.stop(DRONE_PROPELLER);
+      } else {
+        soundManager.play(DRONE_PROPELLER);
         soundManager.play(DRONE_ARM);
-			}
+      }
 
       drone.setArmed(!drone.getArmed());
     }
@@ -103,8 +102,9 @@ void Game::gamepadInputCallback(float leftX, float leftY, float rightX,
     drone.pitchInput = rightY;
     drone.rollInput = rightX;
     drone.throttle = (leftY + 1) / 2; // clamp throttle [0, 1]
-		//drone pitch
-		soundManager.changeSoundPitch(DRONE_PROPELLER, max(drone.throttle+0.5, 0.6));
+    // drone pitch
+    soundManager.changeSoundPitch(DRONE_PROPELLER,
+                                  max(drone.throttle + 0.5, 0.6));
   }
 }
 
@@ -183,12 +183,16 @@ void Game::init(const std::string &resourceDirectory) {
   lipo1 = std::make_shared<Lipo>(resourceDirectory);
   lipo2 = std::make_shared<Lipo>(resourceDirectory);
   lipo3 = std::make_shared<Lipo>(resourceDirectory);
+  lipo4 = std::make_shared<Lipo>(resourceDirectory);
+  lipo5 = std::make_shared<Lipo>(resourceDirectory);
   bonus1 = std::make_shared<Bonus>(resourceDirectory);
   bonus2 = std::make_shared<Bonus>(resourceDirectory);
   bonus3 = std::make_shared<Bonus>(resourceDirectory);
   entityProcess.add(lipo1);
   entityProcess.add(lipo2);
   entityProcess.add(lipo3);
+  entityProcess.add(lipo4);
+  entityProcess.add(lipo5);
   entityProcess.add(bonus1);
   entityProcess.add(bonus2);
   entityProcess.add(bonus3);
@@ -360,6 +364,7 @@ void Game::resize_and_center(vec3 gMin, vec3 gMax,
 
 // function to handle logic calls
 void Game::handleLogic() {
+
   // update Drone sates
   float yawVel =
       get_rate(drone.yawInput, drone.rcRate, drone.superRate); // TODO move this
@@ -373,6 +378,12 @@ void Game::handleLogic() {
   } else if (gameOverFlag) {
     updateUsingCameraPath(dt);
   } else {
+		timeAlive += dt;
+		if ((int)(timeAlive / 60) > difficultyLevel){
+			printf("increaseDifficulty\n");
+			drone.increaseDifficulty(difficultyLevel);
+			difficultyLevel = timeAlive / 60;
+		}
     if (!debugCam_flag) {
       drone.updatePosition(dt);
     }
@@ -477,9 +488,13 @@ void Game::render() {
                      std::string("Score................." +
                                  std::to_string(drone.finalScore)),
                      150, 500, .8f, glm::vec3(1, 1, 0), characters);
-    Text::RenderText(textProg,
-                     std::string("Time Alive............" + std::to_string(0)),
-                     150, 450, .8f, glm::vec3(1, 1, 0), characters);
+    std::ostringstream timeSurvivedOss;
+    timeSurvivedOss << std::fixed << std::setprecision(0) << timeAlive / 60
+                    << ":" << std::setw(2) << std::setfill('0')
+                    << (int)timeAlive % 60;
+    Text::RenderText(
+        textProg, std::string("Time Alive............" + timeSurvivedOss.str()),
+        150, 450, .8f, glm::vec3(1, 1, 0), characters);
     Text::RenderText(textProg,
                      std::string("Total Combos.........." +
                                  std::to_string(drone.totalCombos)),
@@ -518,17 +533,24 @@ void Game::render() {
                      characters);
     Text::RenderText(textProg, "ACRO", 25.0f, 75.0f, .75f,
                      glm::vec3(0.5, 0.8f, 0.2f), characters);
+
+    std::ostringstream timerOss;
+    timerOss << std::fixed << std::setprecision(0) << (int)(timeAlive / 60) << ":"
+             << std::setw(2) << std::setfill('0') << (int)timeAlive % 60;
+    // time alive trakcer
+    Text::RenderText(textProg, timerOss.str(), 650.0f, 550.0f, .75f,
+                     glm::vec3(1.f, 1.f, 1.f), characters);
+    // battery level
     if (drone.battery >= 75)
       batLevelColor = {0.5, 0.8f, 0.2f};
     else if (drone.battery >= 50)
       batLevelColor = {1.0f, 0.8f, 0.0f};
     else if (drone.battery >= 0)
       batLevelColor = {1.0f, 0.0f, 0.0f};
-
     Text::RenderText(
         textProg,
         std::string("BAT: " + std::to_string(static_cast<int>(drone.battery))),
-        25.0f, 125.0f, .75f,  batLevelColor, characters);
+        25.0f, 125.0f, .75f, batLevelColor, characters);
 
     // render score & trick description
     if (drone.trickCount > 0) {
@@ -766,14 +788,16 @@ void Game::render() {
 void Game::gameOver() {
   drone.chargeBattery();
   drone.endCombo();
-	drone.setArmed(false);
-	soundManager.stop(DRONE_PROPELLER);
+  drone.setArmed(false);
+  soundManager.stop(DRONE_PROPELLER);
   gameOverFlag = true;
+  difficultyLevel = 0;
 }
 
 // we need this to restart the game after user
 // gets gameOver screen
 void Game::restartGame() {
+  timeAlive = 0;
   drone.reset();
   gameOverFlag = false;
 }

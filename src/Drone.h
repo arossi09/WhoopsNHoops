@@ -9,7 +9,7 @@
 
 using namespace glm;
 
-#define DECAY_RATE .03
+#define BASE_DECAY_RATE .01
 #define THROTTLE_FACTOR .8
 
 template <typename T>
@@ -29,7 +29,8 @@ std::string join(const std::vector<T> &arr, const std::string &delimiter) {
 struct Drone {
   glm::vec3 light_blue = {0.56, 0.9, 1.0};
   glm::vec3 gold = {1.0, 0.9, 0.0};
-  float battery = 100.0f;
+  float battery = 100.0f;	
+	float batteryDecayRate = BASE_DECAY_RATE;
   float superRate = 0.61f;
   float rcRate = 1.0f;
   float maxVelocity = 100.0f;
@@ -48,7 +49,7 @@ struct Drone {
   std::string trick = "";
   std::string oldTrick = "";
   float styleScore = 0.0f;
-  int scoreDecayRate = 0.0f;
+  float scoreDecayRate = 15.0;
   int score = 0;
   int oldScore = 0;
   int oldTrickCount = 0;
@@ -103,6 +104,10 @@ struct Drone {
               << " y: " << position.y << " z: " << position.z << '\n';
   }
 
+	void increaseDifficulty(int difficultyLevel){
+		batteryDecayRate *= 1.17;
+	}
+
   void setArmed(bool state) { armed = state; }
   bool getArmed() { return armed; }
 
@@ -149,7 +154,7 @@ struct Drone {
   void updatePosition(float dt) {
     if (!armed)
       throttle = 0;
-    battery -= DECAY_RATE + THROTTLE_FACTOR * throttle * dt;
+    battery -= batteryDecayRate + THROTTLE_FACTOR * throttle * dt;
     battery = max(battery, 0.0f);
     if (battery > 100.0f) {
       battery = 100.0f;

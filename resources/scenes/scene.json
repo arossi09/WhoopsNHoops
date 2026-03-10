@@ -41,18 +41,18 @@
 			"scale": [8, 8, 8]
 		},
 		{
-			"name": "cementwall_1",
-			"model": "cementwall.obj",
-			"texture": "concretewall.png",
-			"position": [4.2, 1.2, 0],
-			"rotation": [0, 90, 0],
-			"scale": [7, 9, 7]
-		},
-		{
 			"name": "cementwall_2",
 			"model": "cementwall.obj",
 			"texture": "concretewall.png",
 			"position": [4.2, 1.2, 18],
+			"rotation": [0, 90, 0],
+			"scale": [10.5, 9, 7]
+		},
+		{
+			"name": "cementwall_with_hole",
+			"model": "multi_shape_cementwall_with_hole.obj",
+			"texture": "concretewall.png",
+			"position": [4.2, 1.2, 4],
 			"rotation": [0, 90, 0],
 			"scale": [10.5, 9, 7]
 		},
@@ -359,9 +359,9 @@
 			"name": "farground_right_1",
 			"model": "ground.obj",
 			"texture": "tileblock.png",
-			"position": [95, 1, -70],
+			"position": [95, 0, -70],
 			"rotation": [0, 45, 0],
-			"scale": [50, 20, 50],
+			"scale": [50, 30, 50],
 			"static": true
 		},
 		{
