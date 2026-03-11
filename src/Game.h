@@ -112,6 +112,8 @@ private:
   float yawDelta = 0;
   float pitchDelta = 0;
   float rollDelta = 0;
+	glm::vec2 joystick_left_pos;
+	glm::vec2 joystick_right_pos;
 	std::shared_ptr<JoystickOverlay> left_joystick_overlay;
 	std::shared_ptr<JoystickOverlay> right_joystick_overlay;
   // animation data

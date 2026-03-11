@@ -44,12 +44,12 @@ void JoystickOverlay::init() {
   joystick_background_texture->setFiltering(GL_NEAREST, GL_NEAREST);
 
   joystick_foreground_texture = std::make_shared<Texture>();
-  joystick_foreground_texture.setFilename(resource_directory +
-                                          "/joystick_foreground.png");
-  joystick_foreground_texture.init();
-  joystick_foreground_texture.setUnit(1);
-  joystick_foreground_texture.setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-  joystick_foreground_texture.setFiltering(GL_NEAREST, GL_NEAREST);
+  joystick_foreground_texture->setFilename(resource_directory +
+                                           "/joystick_foreground.png");
+  joystick_foreground_texture->init();
+  joystick_foreground_texture->setUnit(1);
+  joystick_foreground_texture->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+  joystick_foreground_texture->setFiltering(GL_NEAREST, GL_NEAREST);
 
   joystickShader = std::make_shared<Program>();
   joystickShader->setVerbose(true);
@@ -67,27 +67,32 @@ void JoystickOverlay::setResourceDir(const std::string &aResourceDir) {
 
 void JoystickOverlay::draw() {
   joystickShader->bind();
+	glDisable(GL_DEPTH_TEST);
   glBindVertexArray(joystick_VAO);
-  // draw the background
-  glm::mat4 M(1.0f);
-
-  M = glm::scale(M, glm::vec3(.15f, .25f, 1.f));
-  M = glm::translate(M, glm::vec3(global_position, 0.f));
+  glm::mat4 background_model(1.0f);
+  glm::mat4 foreground_model(1.0f);
+  // draw the joystick background
+  background_model = glm::scale(background_model, glm::vec3(.15f, .25f, 1.f));
+  background_model =
+      glm::translate(background_model, glm::vec3(global_position, 0.f));
 
   joystick_background_texture->bind(joystickShader->getUniform("Texture0"));
   glUniformMatrix4fv(joystickShader->getUniform("M"), 1, GL_FALSE,
-                     glm::value_ptr(M));
+                     glm::value_ptr(background_model));
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-  // TODO draw the joystick
-  M = glm::mat4(1.0f);
-  M = glm::scale(M, glm::vec3(.025f, .5f, 1.f));
-  // TODO translate within the domain
-  M = glm::translate(M, glm::vec3(global_position, 0.f));
-  joystick_foreground_texture.bind(joystickShader->getUniform("Texture0"));
+  // draw the joystick foreground
+  foreground_model= glm::scale(foreground_model, glm::vec3(.15f, .25f, 1.f));
+  foreground_model=
+      glm::translate(foreground_model, glm::vec3(global_position, 0.f));
+  foreground_model=
+      glm::translate(foreground_model, glm::vec3(joystick_position, 0.f));
+  joystick_foreground_texture->bind(joystickShader->getUniform("Texture0"));
   glUniformMatrix4fv(joystickShader->getUniform("M"), 1, GL_FALSE,
-                     glm::value_ptr(M));
+                     glm::value_ptr(foreground_model));
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
+	glEnable(GL_DEPTH_TEST);
   joystickShader->unbind();
 }
 void JoystickOverlay::setGlobalPosition(float screen_x, float screen_y) {
@@ -98,6 +103,6 @@ void JoystickOverlay::setGlobalPosition(float screen_x, float screen_y) {
 void JoystickOverlay::updateJoystickPosition(float joystick_position_x,
                                              float joystick_position_y) {
   // update a position variable which translates the verticies in the draw call
-  joystick_position.x = joystick_position_x;
-  joystick_position.y = joystick_position_y;
+  joystick_position.x = joystick_position_x/6;
+  joystick_position.y = joystick_position_y/4;
 }

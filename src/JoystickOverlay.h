@@ -22,7 +22,7 @@ private:
   glm::vec2 joystick_position{0};
   glm::vec2 global_position{0};
   std::shared_ptr<Texture> joystick_background_texture;
-  Texture joystick_foreground_texture;
+	std::shared_ptr<Texture>joystick_foreground_texture;
   GLuint joystick_VAO;
   GLuint joystick_VBO;
   std::string resource_directory;

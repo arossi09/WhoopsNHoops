@@ -101,6 +101,8 @@ void Game::gamepadInputCallback(float leftX, float leftY, float rightX,
     drone.yawInput = -leftX;
     drone.pitchInput = rightY;
     drone.rollInput = rightX;
+		right_joystick_overlay->updateJoystickPosition(-rightX, -rightY);
+		left_joystick_overlay->updateJoystickPosition(leftX, leftY);
     drone.throttle = (leftY + 1) / 2; // clamp throttle [0, 1]
     // drone pitch
     soundManager.changeSoundPitch(DRONE_PROPELLER,
