@@ -2,6 +2,7 @@
 #define GAME_H
 #include "AABB.h"
 #include "Bonus.h"
+#include "JoystickOverlay.h"
 #include "Drone.h"
 #include "EntityProcess.h"
 #include "GLSL.h"
@@ -33,6 +34,9 @@
 #include <tiny_obj_loader/tiny_obj_loader.h>
 
 #define PI 3.1415926535
+
+//TODO #define LEFT_JOYSTICK_POSITION glm::vec2()
+//TODO #define RIGHT_JOYSTICK_POSITION glm::vec2()
 
 // value_ptr for glm
 #include <glm/gtc/type_ptr.hpp>
@@ -108,6 +112,8 @@ private:
   float yawDelta = 0;
   float pitchDelta = 0;
   float rollDelta = 0;
+	std::shared_ptr<JoystickOverlay> left_joystick_overlay;
+	std::shared_ptr<JoystickOverlay> right_joystick_overlay;
   // animation data
   float gTrans = -3;
   float sTheta = 0;

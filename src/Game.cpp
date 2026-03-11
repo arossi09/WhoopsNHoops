@@ -287,6 +287,16 @@ void Game::init(const std::string &resourceDirectory) {
   hud.init();
   hud.addSprite(style_meter);
 
+	left_joystick_overlay =std::make_shared<JoystickOverlay>();
+  left_joystick_overlay->setResourceDir(resourceDirectory);
+  left_joystick_overlay->init();
+	left_joystick_overlay->setGlobalPosition(-.5f, -4.0f);
+
+	right_joystick_overlay=std::make_shared<JoystickOverlay>();
+  right_joystick_overlay->setResourceDir(resourceDirectory);
+  right_joystick_overlay->init();
+	right_joystick_overlay->setGlobalPosition(.5f, -4.0f);
+
   soundManager.setResourceDir(resourceDirectory);
   soundManager.init();
 
@@ -298,6 +308,7 @@ void Game::init(const std::string &resourceDirectory) {
 
   ocean.setResourceDir(resourceDirectory);
   ocean.init();
+
 }
 
 void Game::initGeom(const std::string &resourceDirectory) {
@@ -378,12 +389,12 @@ void Game::handleLogic() {
   } else if (gameOverFlag) {
     updateUsingCameraPath(dt);
   } else {
-		timeAlive += dt;
-		if ((int)(timeAlive / 60) > difficultyLevel){
-			printf("increaseDifficulty\n");
-			drone.increaseDifficulty(difficultyLevel);
-			difficultyLevel = timeAlive / 60;
-		}
+    timeAlive += dt;
+    if ((int)(timeAlive / 60) > difficultyLevel) {
+      printf("increaseDifficulty\n");
+      drone.increaseDifficulty(difficultyLevel);
+      difficultyLevel = timeAlive / 60;
+    }
     if (!debugCam_flag) {
       drone.updatePosition(dt);
     }
@@ -470,7 +481,6 @@ void Game::render() {
   entityProcess.draw(texProg, Model, drone);
   Model->popMatrix();
   texProg->unbind();
-
   /*all of the text*/
   textProg->bind();
   glUniform1i(textProg->getUniform("text"), 0);
@@ -535,8 +545,8 @@ void Game::render() {
                      glm::vec3(0.5, 0.8f, 0.2f), characters);
 
     std::ostringstream timerOss;
-    timerOss << std::fixed << std::setprecision(0) << (int)(timeAlive / 60) << ":"
-             << std::setw(2) << std::setfill('0') << (int)timeAlive % 60;
+    timerOss << std::fixed << std::setprecision(0) << (int)(timeAlive / 60)
+             << ":" << std::setw(2) << std::setfill('0') << (int)timeAlive % 60;
     // time alive trakcer
     Text::RenderText(textProg, timerOss.str(), 650.0f, 550.0f, .75f,
                      glm::vec3(1.f, 1.f, 1.f), characters);
@@ -589,6 +599,10 @@ void Game::render() {
     }
   }
   textProg->unbind();
+
+	//draw the joystick overlay
+  right_joystick_overlay->draw();
+  left_joystick_overlay->draw();
   glDisable(GL_BLEND);
 
   // draw and update hud
