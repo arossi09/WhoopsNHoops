@@ -16,7 +16,11 @@ bool SoundManager::init() {
       (p_ResourceDir + "/sounds/arm.wav").c_str());
   p_DroneDisarmSound = SoundBuffer::get()->addSoundEffect(
       (p_ResourceDir + "/sounds/disarm.wav").c_str());
+  p_SpecialSound = SoundBuffer::get()->addSoundEffect(
+      (p_ResourceDir + "/sounds/special.wav").c_str());
+  p_SpecialSoundSource.setGain(0.1f);
   p_DroneSoundSource.loopSound();
+  p_DroneSoundSource.setGain(1.5f);
   // TODO set up other sounds
   return 1;
 }
@@ -35,6 +39,8 @@ void SoundManager::changeSoundPitch(SoundEffect sound, float pitch) {
   case DRONE_DISARM:
     break;
   case BONUS_PICKUP:
+    break;
+  case SPECIAL:
     break;
   }
 }
@@ -64,6 +70,9 @@ void SoundManager::play(SoundEffect sound) {
   case DRONE_DISARM:
     p_SoundSource1.play(p_DroneDisarmSound);
     break;
+  case SPECIAL:
+    p_SpecialSoundSource.play(p_SpecialSound);
+    break;
   }
 }
 
@@ -81,6 +90,8 @@ void SoundManager::stop(SoundEffect sound) {
   case DRONE_DISARM:
     break;
   case BONUS_PICKUP:
+    break;
+  case SPECIAL:
     break;
   }
 }

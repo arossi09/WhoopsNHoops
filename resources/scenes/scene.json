@@ -60,41 +60,41 @@
 			"name": "guardrail_middle_left",
 			"model": "multi_shape_guardrail.obj",
 			"texture": "guardrail.png",
-			"position": [0, -0.35, -18],
+			"position": [0, -0.2, -18],
 			"rotation": [0, -86.36, 0],
-			"scale": [5, 5, 5]
+			"scale": [5, 6, 5]
 		},
 		{
 			"name": "guardrail_middle_right",
 			"model": "multi_shape_guardrail.obj",
 			"texture": "guardrail.png",
-			"position": [12, -0.35, -18],
+			"position": [12, -0.2, -18],
 			"rotation": [0, -94.74, 0],
-			"scale": [5, 5, 5]
+			"scale": [5, 6, 5]
 		},
 		{
 			"name": "guardrail_most_right",
 			"model": "multi_shape_guardrail.obj",
 			"texture": "guardrail.png",
-			"position": [28, -0.35, -18],
+			"position": [28, -0.2, -18],
 			"rotation": [0, -90, 0],
-			"scale": [5, 5, 5]
+			"scale": [5, 6, 5]
 		},
 		{
 			"name": "guardrail_most_left",
 			"model": "multi_shape_guardrail.obj",
 			"texture": "guardrail.png",
-			"position": [-30, -0.35, -18],
+			"position": [-30, -0.2, -18],
 			"rotation": [0, -86.36, 0],
-			"scale": [5, 5, 5]
+			"scale": [5, 6, 5]
 		},
 		{
 			"name": "guardrail_left",
 			"model": "multi_shape_guardrail.obj",
 			"texture": "guardrail.png",
-			"position": [-18, -0.35, -18],
+			"position": [-18, -0.2, -18],
 			"rotation": [0, -90, 0],
-			"scale": [5, 5, 5]
+			"scale": [5, 6, 5]
 		},
 		{
 			"name": "pallet_top",
@@ -391,9 +391,9 @@
 			"name": "farground_left_3",
 			"model": "ground.obj",
 			"texture": "tileblock.png",
-			"position": [-98, 3, 6],
+			"position": [-98, 3.5, 6],
 			"rotation": [0, 45, 0],
-			"scale": [30, 40, 30],
+			"scale": [40, 40, 30],
 			"static": true
 		},
 		{
@@ -418,7 +418,7 @@
 			"name": "farground_right_3",
 			"model": "ground.obj",
 			"texture": "tileblock.png",
-			"position": [98, 3, 6],
+			"position": [98, 3.5, 6],
 			"rotation": [0, -45, 0],
 			"scale": [30, 40, 30],
 			"static": true
@@ -463,7 +463,7 @@
 			"name": "skyscraper_5",
 			"model": "skyscraper.obj",
 			"texture": "skyscraper_3.jpg",
-			"position": [-130, 36, 20],
+			"position": [-100, 36, 20],
 			"rotation": [0, 20, 0],
 			"scale": [20, 20, 20],
 			"static": true
@@ -488,9 +488,25 @@
 			"name": "hill",
 			"model": "hill.obj",
 			"texture": "hill.png",
-			"position": [0, 20, 35],
+			"position": [0, 20, 34.5],
 			"rotation": [0, -90, 0],
 			"scale": [50, 41, 41]
+		},
+		{
+			"name": "caution_wall",
+			"model": "metalfence.obj",
+			"texture": "caution.png",
+			"position": [30.5, 4, 27],
+			"rotation": [0, 0, 0],
+			"scale": [4.5, 5, 5]
+		},
+		{
+			"name": "caution_wall2",
+			"model": "metalfence.obj",
+			"texture": "caution.png",
+			"position": [-31.5, 4, 27],
+			"rotation": [0, 0, 0],
+			"scale": [4.5, 5, 5]
 		}
 	]
 }

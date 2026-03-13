@@ -37,7 +37,6 @@ Bonus::Bonus(const std::string &resourceDirectory) {
 // we need this to draw and transform the AABB
 void Bonus::draw(std::shared_ptr<Program> prog,
                 std::shared_ptr<MatrixStack> Model, Drone &drone) {
-	if(drone.special_mode){
 		bonus_texture->bind(prog->getUniform("Texture0"));
 		Model->pushMatrix();
 		Model->translate(
@@ -48,16 +47,14 @@ void Bonus::draw(std::shared_ptr<Program> prog,
 		bonus_AABB->transform(Model->topMatrix());
 		shape->draw(prog);
 		Model->popMatrix();
-	}
 }
 
 
 void Bonus::update(float dt, Drone &drone) {
   // charge drone battery;
-	if(drone.special_mode){
-		drone.scoreBonus();
-		needsRespawn = true;
-	}
+	if(drone.getHealth()<4)
+		drone.setHealth(drone.getHealth()+1);
+	needsRespawn = true;
   return;
 }
 

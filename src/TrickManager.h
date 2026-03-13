@@ -1,3 +1,4 @@
+#include "SoundManager.h"
 #include "TrickSM.h"
 #include "iostream"
 
@@ -21,13 +22,20 @@ public:
   }
 
   void addBonus() {
-    score += 100.0f;
+    score += 50.0f;
     trickArray.push_back("BONUS");
+  }
+
+  void addSpecialTrickBonus() {
+    score += 250.0f;
+    trickCount++;
+    trickArray.push_back("!");
   }
 
   // src/TrickManager
   void update(float dPitch, float dRoll, float dYaw, const glm::vec3 &up,
-              float dt, float maxTrickTime, float *styleScore) {
+              float dt, float maxTrickTime, float *styleScore,
+              SoundManager &sm) {
 
     timeSinceLastTrick += dt;
     if (trickArray.size() > 10)
@@ -35,34 +43,33 @@ public:
 
     if (splitSFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("splitS");
-      score += 500;
-			*styleScore += 500;
+      score += 200;
+      *styleScore += 500;
       trickCount++;
+			//sm.play(TRICK);
       resetTrickTimer();
       return;
     }
 
     if (rollFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("roll");
-      score += 150;
-			*styleScore += 150;
+      score += 100;
+      *styleScore += 150;
       trickCount++;
+			//sm.play(TRICK);
       resetTrickTimer();
       return;
     }
 
     if (flipFSM.update(dPitch, dRoll, dYaw, up, dt, maxTrickTime)) {
       trickArray.push_back("flip");
-      score += 150;
-			*styleScore += 150;
+      score += 100;
+      *styleScore += 150;
       trickCount++;
+			//sm.play(TRICK);
       resetTrickTimer();
       return;
     }
-
-    /*if (timeSinceLastTrick > 13.0f && ) {
-      resetAll();
-    }*/
   }
 
   void reset() { resetAll(); }

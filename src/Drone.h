@@ -29,8 +29,8 @@ std::string join(const std::vector<T> &arr, const std::string &delimiter) {
 struct Drone {
   glm::vec3 light_blue = {0.56, 0.9, 1.0};
   glm::vec3 gold = {1.0, 0.9, 0.0};
-  float battery = 100.0f;	
-	float batteryDecayRate = BASE_DECAY_RATE;
+  float battery = 100.0f;
+  float batteryDecayRate = BASE_DECAY_RATE;
   float superRate = 0.61f;
   float rcRate = 1.0f;
   float maxVelocity = 100.0f;
@@ -43,7 +43,7 @@ struct Drone {
   float mass = 250.0f;
   float camera_title_angle = 25;
   bool armed = false;
-	float timeLastHit = 0.0f;
+  float timeLastHit = 0.0f;
 
   glm::vec3 droneColor = light_blue;
 
@@ -80,6 +80,11 @@ struct Drone {
   bool touching_collider = false;
   bool was_touching = false;
 
+	bool special_sound_played = false;
+
+  // for tracking health
+  int health = 4;
+
   AABB getAABB() const {
     float halfSize = .7f;
     return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
@@ -96,6 +101,10 @@ struct Drone {
 
   void setObstaclesHit(int num) { obstaclesHit = num; }
 
+  void setHealth(int val) { health = val; }
+
+  int getHealth() { return health; }
+
   int getBatteriesCollected() { return batteriesCollected; }
 
   void setBatteriesCollected(int num) { batteriesCollected = num; }
@@ -105,9 +114,7 @@ struct Drone {
               << " y: " << position.y << " z: " << position.z << '\n';
   }
 
-	void increaseDifficulty(int difficultyLevel){
-		batteryDecayRate *= 1.17;
-	}
+  void increaseDifficulty(int difficultyLevel) { batteryDecayRate *= 1.17; }
 
   void setArmed(bool state) { armed = state; }
   bool getArmed() { return armed; }
@@ -115,6 +122,7 @@ struct Drone {
   void chargeBattery() { battery = 100.0f; }
 
   void scoreBonus() { trickManager.addBonus(); }
+  void scoreSpecialTrickBonus() { trickManager.addSpecialTrickBonus(); };
 
   // we need this to reset the state of the drone
   // on gameovers
@@ -130,6 +138,7 @@ struct Drone {
     oldTrick = "";
     oldTrickCount = 0;
     totalScore = 0.0f;
+    health = 5;
     position = glm::vec3(0.0f);
     acceleration = glm::vec3(0.0f);
     velocity = glm::vec3(0.0f);
@@ -179,7 +188,7 @@ struct Drone {
     }
   }
 
-  void updateTrickState(float dt) {
+  void updateTrickState(float dt, SoundManager &soundManager) {
     // we need to calculate the delta angles for pitch, yaw, and
     // roll to see if we complete full rotations
     glm::quat deltaQ = glm::inverse(prevorientation) * orientation;
@@ -193,17 +202,23 @@ struct Drone {
     score = trickManager.score;
     trickCount = trickManager.trickCount;
     vec3 up = orientation * vec3(0, 1, 0);
-    trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime, &styleScore);
+    trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime, &styleScore,
+                        soundManager);
 
     if (styleScore > 0)
       styleScore -= dt * scoreDecayRate;
 
     // we need to set drone to special mode if above score of 3000
     if (styleScore >= special_score_thresh) {
+			if(!special_sound_played){
+				soundManager.play(SPECIAL);
+				special_sound_played = true;
+			}
       special_mode = true;
       droneColor = gold;
       maxVelocity = 150.0f;
     } else {
+			special_sound_played = false;
       special_mode = false;
       droneColor = light_blue;
       maxVelocity = 100.0f;

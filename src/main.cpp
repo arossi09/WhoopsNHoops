@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   // Loop until the user closes the window.
   while (!glfwWindowShouldClose(windowManager->getHandle())) {
     game->calculateDeltaTime();
-    if (game->getDrone()->battery <= 0) {
+    if (game->getDrone()->battery <= 0 || game->getDrone()->health <= 0) {
       game->gameOver();
     }
     // Render scene.

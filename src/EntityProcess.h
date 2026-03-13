@@ -2,7 +2,9 @@
 #include "Entity.h"
 #include "SoundManager.h"
 #include "SpawnManager.h"
+#include "SpecialTrickBonus.h"
 #include <iostream>
+#include <memory>
 
 class EntityProcess {
 public:
@@ -21,6 +23,23 @@ public:
 
   void add(std::shared_ptr<Entity> entity) { entities.push_back(entity); }
 
+	//used for initlizing all entities
+  void init() {
+    for (int i = 0; i < entities.size(); i++) {
+      if (entities[i]->getNeedRespawn()) {
+        if (dynamic_cast<SpecialTrickBonus *>(entities[i].get())) {
+          glm::vec3 curr_pos = entities[i]->getPos();
+          entities[i]->setPos(spawn_manager.get_special_new_spawn(curr_pos));
+          entities[i]->setNeedRespawn(false);
+        } else {
+          glm::vec3 curr_pos = entities[i]->getPos();
+          entities[i]->setPos(spawn_manager.get_new_spawn(curr_pos));
+          entities[i]->setNeedRespawn(false);
+        }
+      }
+    }
+  }
+
   // we need to loop through entities and see if they intersect with drone in
   // order to do their update state
   void update(float dt, Drone &drone, SoundManager &sm) {
@@ -33,10 +52,17 @@ public:
         // we need pull new spawn for entity from spawn manager if
         // the entity needs a respawn
         if (entities[i]->getNeedRespawn()) {
-					sm.play(BATTERY_PICKUP);
-          glm::vec3 curr_pos = entities[i]->getPos();
-          entities[i]->setPos(spawn_manager.get_new_spawn(curr_pos));
-          entities[i]->setNeedRespawn(false);
+          if (dynamic_cast<SpecialTrickBonus *>(entities[i].get())) {
+          	sm.play(SPECIAL);
+            glm::vec3 curr_pos = entities[i]->getPos();
+            entities[i]->setPos(spawn_manager.get_special_new_spawn(curr_pos));
+            entities[i]->setNeedRespawn(false);
+          } else {
+          	sm.play(BATTERY_PICKUP);
+            glm::vec3 curr_pos = entities[i]->getPos();
+            entities[i]->setPos(spawn_manager.get_new_spawn(curr_pos));
+            entities[i]->setNeedRespawn(false);
+          }
         }
       } else {
         std::cout << "UPDATE::ENTITIES: AABB is NULL!" << std::endl;

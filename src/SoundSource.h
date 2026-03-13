@@ -9,6 +9,7 @@ public:
 	void stop(const ALuint buffer_to_stop);
 	void loopSound();
 	void setPitch(float new_pitch);
+	void setGain(float new_gain);
 	float getPitch();
 
 private:

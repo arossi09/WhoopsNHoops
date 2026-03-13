@@ -27,10 +27,14 @@ void SoundSource::play(const ALuint buffer_to_play) {
   alSourcePlay(p_Source);
 }
 
-void SoundSource::stop(const ALuint buffer_to_stop) {
-  alSourceStop(p_Source);
-}
-
+void SoundSource::stop(const ALuint buffer_to_stop) { alSourceStop(p_Source); }
 
 float SoundSource::getPitch() { return p_Pitch; }
-void SoundSource::setPitch(float val) { p_Pitch = val; alSourcef(p_Source, AL_PITCH, p_Pitch);}
+void SoundSource::setGain(float new_gain) {
+  p_Gain = new_gain;
+  alSourcef(p_Source, AL_GAIN, p_Gain);
+};
+void SoundSource::setPitch(float val) {
+  p_Pitch = val;
+  alSourcef(p_Source, AL_PITCH, p_Pitch);
+}

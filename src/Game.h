@@ -26,6 +26,7 @@
 #include "WindowManager.h"
 #include "ocean.h"
 #include "skybox.h"
+#include "SpecialTrickBonus.h"
 #include <chrono>
 #include <glad/glad.h>
 #include <iostream>
@@ -99,7 +100,10 @@ private:
   std::shared_ptr<Bonus> bonus1;
   std::shared_ptr<Bonus> bonus2;
   std::shared_ptr<Bonus> bonus3;
-  // variables used for camera positing
+	//Special trick pickups
+  std::shared_ptr<SpecialTrickBonus> special_trick_bonus1;
+  std::shared_ptr<SpecialTrickBonus> special_trick_bonus2;
+	// variables used for camera positing
   vec3 gPos; // global Pos
   vec3 gCenter = vec3(0, 0, 0);
   float radius = 100;
@@ -138,7 +142,7 @@ private:
 	
 
   Drone drone;
-  AABB worldBox = AABB(vec3(-170, -20, -170), vec3(170, 500, 250));
+  AABB worldBox = AABB(vec3(-168, -20, -170), vec3(160, 500, 250));
 
   void keyCallback(GLFWwindow *window, int key, int scancode, int action,
                    int mods);

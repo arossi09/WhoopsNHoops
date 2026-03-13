@@ -11,16 +11,19 @@ bool handleCollision(const AABB &box, Drone &drone, SoundManager &sm,
   if (isIntersecting) {
     resolveAABBCollision(box, drone);
 
-    if (!wasTouching && !crashTriggeredThisFrame ) {
-      drone.endCombo();
-      if (!(glfwGetTime() - drone.timeLastHit <= 1.0f) && box.name != "ground") {
+    if (!wasTouching && !crashTriggeredThisFrame) {
+      if (!(glfwGetTime() - drone.timeLastHit <= 1.0f) &&
+          box.name != "ground") {
+				if(!drone.special_mode)
+        	drone.setHealth(drone.getHealth() - 1);
         drone.timeLastHit = glfwGetTime();
         sm.play(CRASH);
-      	drone.setObstaclesHit(drone.getObstaclesHit() + 1);
+        drone.setObstaclesHit(drone.getObstaclesHit() + 1);
       }
+      drone.endCombo();
       crashTriggeredThisFrame = true;
     }
-		return true;
+    return true;
   }
   return false;
 }

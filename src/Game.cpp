@@ -39,7 +39,11 @@ void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action,
   }
 
   if (key == GLFW_KEY_O && action == GLFW_PRESS) {
-    soundManager.play(DRONE_PROPELLER);
+		if(drone.getArmed()){
+			soundManager.stop(DRONE_PROPELLER);
+		}else{
+    	soundManager.play(DRONE_PROPELLER);
+		}
     drone.setArmed(!drone.getArmed());
   }
 
@@ -194,6 +198,8 @@ void Game::init(const std::string &resourceDirectory) {
   bonus1 = std::make_shared<Bonus>(resourceDirectory);
   bonus2 = std::make_shared<Bonus>(resourceDirectory);
   bonus3 = std::make_shared<Bonus>(resourceDirectory);
+  special_trick_bonus1 = std::make_shared<SpecialTrickBonus>(resourceDirectory);
+  special_trick_bonus2 = std::make_shared<SpecialTrickBonus>(resourceDirectory);
   entityProcess.add(lipo1);
   entityProcess.add(lipo2);
   entityProcess.add(lipo3);
@@ -202,6 +208,8 @@ void Game::init(const std::string &resourceDirectory) {
   entityProcess.add(bonus1);
   entityProcess.add(bonus2);
   entityProcess.add(bonus3);
+  entityProcess.add(special_trick_bonus1);
+  entityProcess.add(special_trick_bonus2);
 
   /*--------------CAMERA PATHS-------------*/
   splinepath[0] =
@@ -314,6 +322,7 @@ void Game::init(const std::string &resourceDirectory) {
 
   ocean.setResourceDir(resourceDirectory);
   ocean.init();
+  entityProcess.init();
 }
 
 void Game::initGeom(const std::string &resourceDirectory) {
@@ -394,9 +403,9 @@ void Game::handleLogic() {
   } else if (gameOverFlag) {
     updateUsingCameraPath(dt);
   } else {
+
     timeAlive += dt;
     if ((int)(timeAlive / 60) > difficultyLevel) {
-      printf("increaseDifficulty\n");
       drone.increaseDifficulty(difficultyLevel);
       difficultyLevel = timeAlive / 60;
     }
@@ -404,7 +413,7 @@ void Game::handleLogic() {
       drone.updatePosition(dt);
     }
     drone.updateOrientation(rollVel, pitchVel, yawVel, dt);
-    drone.updateTrickState(dt);
+    drone.updateTrickState(dt, soundManager);
     entityProcess.update(dt, drone, soundManager);
   }
 
@@ -497,6 +506,7 @@ void Game::render() {
                      characters);
   }
   if (gameOverFlag) {
+
     Text::RenderText(textProg, std::string("Final Stats:"), 100, 550, .8f,
                      glm::vec3(1, 1, 1), characters);
     Text::RenderText(textProg,
@@ -680,28 +690,30 @@ void Game::render() {
     setModel(solidProg, Model);
     cube->draw(solidProg);
 
-    Model->pushMatrix();
-    glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-    Model->translate(vec3(0, .5, 0));
-    Model->rotate(-propellerAngle, vec3(0, 1, 0));
-    Model->scale(vec3(.3, .5, .3));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    // props accros
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(4, .2, .5));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(.5, .2, 4));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
+    if (drone.health >= 4) {
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(-propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->popMatrix();
+    }
 
-    Model->popMatrix();
     Model->popMatrix();
     Model->pushMatrix();
     glUniform3fv(solidProg->getUniform("color"), 1,
@@ -711,28 +723,29 @@ void Game::render() {
     setModel(solidProg, Model);
     cube->draw(solidProg);
 
-    Model->pushMatrix();
-    glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-    Model->translate(vec3(0, .5, 0));
-    Model->rotate(-propellerAngle, vec3(0, 1, 0));
-    Model->scale(vec3(.3, .5, .3));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    // props accros
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(4, .2, .5));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(.5, .2, 4));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
-
-    Model->popMatrix();
+    if (drone.getHealth() >= 3) {
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(-propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->popMatrix();
+    }
     Model->popMatrix();
     Model->pushMatrix();
     glUniform3fv(solidProg->getUniform("color"), 1,
@@ -742,28 +755,30 @@ void Game::render() {
     setModel(solidProg, Model);
     cube->draw(solidProg);
 
-    Model->pushMatrix();
-    glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-    Model->translate(vec3(0, .5, 0));
-    Model->rotate(propellerAngle, vec3(0, 1, 0));
-    Model->scale(vec3(.3, .5, .3));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    // props accros
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(4, .2, .5));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(.5, .2, 4));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
+    if (drone.getHealth() >= 2) {
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
 
-    Model->popMatrix();
+      Model->popMatrix();
+    }
     Model->popMatrix();
     Model->pushMatrix();
     glUniform3fv(solidProg->getUniform("color"), 1,
@@ -773,28 +788,31 @@ void Game::render() {
     setModel(solidProg, Model);
     cube->draw(solidProg);
     // prop middle
-    Model->pushMatrix();
-    glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
-    Model->translate(vec3(0, .5, 0));
-    Model->rotate(propellerAngle, vec3(0, 1, 0));
-    Model->scale(vec3(.3, .5, .3));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    // props accros
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(4, .2, .5));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
-    Model->pushMatrix();
-    Model->translate(vec3(0, .5, 0));
-    Model->scale(vec3(.5, .2, 4));
-    setModel(solidProg, Model);
-    cube->draw(solidProg);
-    Model->popMatrix();
+    if (drone.getHealth() >= 1) {
 
-    Model->popMatrix();
+      Model->pushMatrix();
+      glUniform3f(solidProg->getUniform("color"), 1.0, 1.0, 1.0);
+      Model->translate(vec3(0, .5, 0));
+      Model->rotate(propellerAngle, vec3(0, 1, 0));
+      Model->scale(vec3(.3, .5, .3));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      // props accros
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(4, .2, .5));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+      Model->pushMatrix();
+      Model->translate(vec3(0, .5, 0));
+      Model->scale(vec3(.5, .2, 4));
+      setModel(solidProg, Model);
+      cube->draw(solidProg);
+      Model->popMatrix();
+
+      Model->popMatrix();
+    }
     Model->popMatrix();
     Model->popMatrix();
     solidProg->unbind();
