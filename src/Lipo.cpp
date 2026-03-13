@@ -53,7 +53,7 @@ void Lipo::draw(std::shared_ptr<Program> prog,
 
 void Lipo::update(float dt, Drone &drone) {
   // charge drone battery;
-  drone.battery += 20.0f;
+  drone.battery += 25.0f;
   drone.setBatteriesCollected(drone.getBatteriesCollected() + 1);
 	needsRespawn = true;
 	//newRandPosition();

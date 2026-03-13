@@ -80,13 +80,13 @@ struct Drone {
   bool touching_collider = false;
   bool was_touching = false;
 
-	bool special_sound_played = false;
+  bool special_sound_played = false;
 
   // for tracking health
   int health = 4;
 
   AABB getAABB() const {
-    float halfSize = .7f;
+    float halfSize = .6f;
     return AABB(position - glm::vec3(halfSize), position + glm::vec3(halfSize));
   }
 
@@ -205,20 +205,21 @@ struct Drone {
     trickManager.update(dPitch, dRoll, dYaw, up, dt, maxTricktime, &styleScore,
                         soundManager);
 
-    if (styleScore > 0)
+    if (styleScore > 0) {
       styleScore -= dt * scoreDecayRate;
+    }
 
     // we need to set drone to special mode if above score of 3000
     if (styleScore >= special_score_thresh) {
-			if(!special_sound_played){
-				soundManager.play(SPECIAL);
-				special_sound_played = true;
-			}
+      if (!special_sound_played) {
+        soundManager.play(SPECIAL);
+        special_sound_played = true;
+      }
       special_mode = true;
       droneColor = gold;
       maxVelocity = 150.0f;
     } else {
-			special_sound_played = false;
+      special_sound_played = false;
       special_mode = false;
       droneColor = light_blue;
       maxVelocity = 100.0f;
