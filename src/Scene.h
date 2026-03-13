@@ -33,6 +33,7 @@ public:
     glm::vec3 rotation;
     glm::vec3 scale = glm::vec3(1.0f);
     std::vector<std::shared_ptr<AABB>> colliders;
+		std::string animation;
 		//this flag is for deciding if object can be interacted with (moving, collidable)
 		bool is_static = false;
     void draw(std::shared_ptr<Program> prog, const glm::mat4 &parent);

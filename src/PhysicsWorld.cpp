@@ -21,7 +21,8 @@ void PhysicsWorld::handleDroneCollisions(Drone &drone, SoundManager &sm) {
   for (auto &collider : colliders) {
     // if the drone collided this frame save that
     bool hit = Physics::handleCollision(*collider, drone, sm, wasTouching, crashTriggeredThisFrame);
-		touchingThisFrame = touchingThisFrame || hit;
+		if(!touchingThisFrame)
+			touchingThisFrame = touchingThisFrame || hit;
   }
 	drone.setTouchingCollider(touchingThisFrame);
 }

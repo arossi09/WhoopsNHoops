@@ -20,6 +20,7 @@ private:
   GLuint background_VBO;
   GLuint EBO;
   glm::vec2 joystick_position{0};
+	float joystick_scale{1};
   glm::vec2 global_position{0};
   std::shared_ptr<Texture> joystick_background_texture;
 	std::shared_ptr<Texture>joystick_foreground_texture;

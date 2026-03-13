@@ -43,6 +43,7 @@ struct Drone {
   float mass = 250.0f;
   float camera_title_angle = 25;
   bool armed = false;
+	float timeLastHit = 0.0f;
 
   glm::vec3 droneColor = light_blue;
 

@@ -60,9 +60,9 @@ public:
       return;
     }
 
-    if (timeSinceLastTrick > 13.0f) {
+    /*if (timeSinceLastTrick > 13.0f && ) {
       resetAll();
-    }
+    }*/
   }
 
   void reset() { resetAll(); }

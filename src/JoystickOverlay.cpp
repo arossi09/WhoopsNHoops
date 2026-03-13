@@ -67,7 +67,7 @@ void JoystickOverlay::setResourceDir(const std::string &aResourceDir) {
 
 void JoystickOverlay::draw() {
   joystickShader->bind();
-	glDisable(GL_DEPTH_TEST);
+  glDisable(GL_DEPTH_TEST);
   glBindVertexArray(joystick_VAO);
   glm::mat4 background_model(1.0f);
   glm::mat4 foreground_model(1.0f);
@@ -82,17 +82,19 @@ void JoystickOverlay::draw() {
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
   // draw the joystick foreground
-  foreground_model= glm::scale(foreground_model, glm::vec3(.15f, .25f, 1.f));
-  foreground_model=
+  foreground_model = glm::scale(foreground_model, glm::vec3(.15f, .25f, 1.f));
+  //foreground_model = glm::scale(
+      //TODO fix the order of scale and translate foreground_model, glm::vec3(joystick_scale, joystick_scale, 1.f));
+  foreground_model =
       glm::translate(foreground_model, glm::vec3(global_position, 0.f));
-  foreground_model=
+  foreground_model =
       glm::translate(foreground_model, glm::vec3(joystick_position, 0.f));
   joystick_foreground_texture->bind(joystickShader->getUniform("Texture0"));
   glUniformMatrix4fv(joystickShader->getUniform("M"), 1, GL_FALSE,
                      glm::value_ptr(foreground_model));
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
-	glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);
   joystickShader->unbind();
 }
 void JoystickOverlay::setGlobalPosition(float screen_x, float screen_y) {
@@ -103,6 +105,7 @@ void JoystickOverlay::setGlobalPosition(float screen_x, float screen_y) {
 void JoystickOverlay::updateJoystickPosition(float joystick_position_x,
                                              float joystick_position_y) {
   // update a position variable which translates the verticies in the draw call
-  joystick_position.x = joystick_position_x/6;
-  joystick_position.y = joystick_position_y/4;
+  joystick_position.x = joystick_position_x / 6;
+  joystick_position.y = joystick_position_y / 4;
+  joystick_scale = fmax(joystick_position_y + joystick_position_x, 1.0f);
 }

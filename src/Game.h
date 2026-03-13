@@ -126,6 +126,7 @@ private:
   float text_fallSpeed = 30.0f;
   bool debugCam_flag = false;
   bool hud_flag = true;
+	bool joystick_flag =false;
   bool goCamera_flag = true;
   bool gameOverFlag = false;
 	float timeAlive = 0.0f;
@@ -137,7 +138,7 @@ private:
 	
 
   Drone drone;
-  AABB worldBox = AABB(vec3(-170, -20, -170), vec3(170, 200, 250));
+  AABB worldBox = AABB(vec3(-170, -20, -170), vec3(170, 500, 250));
 
   void keyCallback(GLFWwindow *window, int key, int scancode, int action,
                    int mods);

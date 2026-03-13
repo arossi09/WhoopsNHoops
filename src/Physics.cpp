@@ -1,4 +1,5 @@
 #include "Physics.h"
+#include "GLFW//glfw3.h"
 
 namespace Physics {
 bool handleCollision(const AABB &box, Drone &drone, SoundManager &sm,
@@ -10,22 +11,16 @@ bool handleCollision(const AABB &box, Drone &drone, SoundManager &sm,
   if (isIntersecting) {
     resolveAABBCollision(box, drone);
 
-    if (!wasTouching && !crashTriggeredThisFrame && box.name != "ground") {
+    if (!wasTouching && !crashTriggeredThisFrame ) {
       drone.endCombo();
-      drone.setObstaclesHit(drone.getObstaclesHit() + 1);
-      sm.play(CRASH);
+      if (!(glfwGetTime() - drone.timeLastHit <= 1.0f) && box.name != "ground") {
+        drone.timeLastHit = glfwGetTime();
+        sm.play(CRASH);
+      	drone.setObstaclesHit(drone.getObstaclesHit() + 1);
+      }
       crashTriggeredThisFrame = true;
     }
-    // only trigger if the drone wasnt touching anything before this frame
-    /*
-    if(!wasTouching && !crashTriggeredThisFrame){
-            drone.endCombo();
-            drone.setObstaclesHit(drone.getObstaclesHit() + 1);
-            sm.play(CRASH);
-            crashTriggeredThisFrame = true;
-    }
-    */
-    return true;
+		return true;
   }
   return false;
 }

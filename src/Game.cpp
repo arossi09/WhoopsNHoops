@@ -27,6 +27,10 @@ void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action,
     debugCam_flag = !debugCam_flag;
   }
 
+  if (key == GLFW_KEY_J && action == GLFW_PRESS) {
+    joystick_flag = !joystick_flag;
+  }
+
   if (key == GLFW_KEY_R && action == GLFW_PRESS) {
     if (gameOverFlag) {
       std::cout << "Restarting the game" << std::endl;
@@ -101,8 +105,8 @@ void Game::gamepadInputCallback(float leftX, float leftY, float rightX,
     drone.yawInput = -leftX;
     drone.pitchInput = rightY;
     drone.rollInput = rightX;
-		right_joystick_overlay->updateJoystickPosition(-rightX, -rightY);
-		left_joystick_overlay->updateJoystickPosition(leftX, leftY);
+    right_joystick_overlay->updateJoystickPosition(-rightX, -rightY);
+    left_joystick_overlay->updateJoystickPosition(leftX, leftY);
     drone.throttle = (leftY + 1) / 2; // clamp throttle [0, 1]
     // drone pitch
     soundManager.changeSoundPitch(DRONE_PROPELLER,
@@ -289,15 +293,15 @@ void Game::init(const std::string &resourceDirectory) {
   hud.init();
   hud.addSprite(style_meter);
 
-	left_joystick_overlay =std::make_shared<JoystickOverlay>();
+  left_joystick_overlay = std::make_shared<JoystickOverlay>();
   left_joystick_overlay->setResourceDir(resourceDirectory);
   left_joystick_overlay->init();
-	left_joystick_overlay->setGlobalPosition(-.5f, -4.0f);
+  left_joystick_overlay->setGlobalPosition(-6.25, -2.0f);
 
-	right_joystick_overlay=std::make_shared<JoystickOverlay>();
+  right_joystick_overlay = std::make_shared<JoystickOverlay>();
   right_joystick_overlay->setResourceDir(resourceDirectory);
   right_joystick_overlay->init();
-	right_joystick_overlay->setGlobalPosition(.5f, -4.0f);
+  right_joystick_overlay->setGlobalPosition(-5.25, -2.0f);
 
   soundManager.setResourceDir(resourceDirectory);
   soundManager.init();
@@ -310,7 +314,6 @@ void Game::init(const std::string &resourceDirectory) {
 
   ocean.setResourceDir(resourceDirectory);
   ocean.init();
-
 }
 
 void Game::initGeom(const std::string &resourceDirectory) {
@@ -602,25 +605,31 @@ void Game::render() {
   }
   textProg->unbind();
 
-	//draw the joystick overlay
-  right_joystick_overlay->draw();
-  left_joystick_overlay->draw();
-  glDisable(GL_BLEND);
+  // draw the joystick overlay
 
   // draw and update hud
   if (!goCamera_flag && !gameOverFlag) {
-    float fill = drone.styleScore / drone.special_score_thresh - dt;
-    hud.setTargetFill(fill);
-    hud.update(dt);
-    hud.draw();
-    if (drone.special_mode) {
-      style_meter.size = glm::vec2(sTheta, cTheta);
+    if (joystick_flag) {
+      right_joystick_overlay->draw();
+      left_joystick_overlay->draw();
+    }
+
+    glDisable(GL_BLEND);
+    if (hud_flag) {
+
+      float fill = drone.styleScore / drone.special_score_thresh - dt;
+      hud.setTargetFill(fill);
+      hud.update(dt);
+      hud.draw();
+      if (drone.special_mode) {
+        style_meter.size = glm::vec2(sTheta, cTheta);
+      }
     }
   }
   glClear(GL_DEPTH_BUFFER_BIT);
 
   // draw the drone
-  if (!goCamera_flag && !gameOverFlag) {
+  if (!goCamera_flag && !gameOverFlag && hud_flag) {
     solidProg->bind();
     glUniformMatrix4fv(solidProg->getUniform("P"), 1, GL_FALSE,
                        value_ptr(Projection->topMatrix()));

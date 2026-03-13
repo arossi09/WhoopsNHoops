@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "GLFW/glfw3.h"
 #include "Program.h"
 #include "nlohmann/json.hpp"
 #include <fstream>
@@ -21,6 +22,9 @@ void SceneObject::draw(std::shared_ptr<Program> prog, const glm::mat4 &parent) {
       (mesh->gMax.z - mesh->gMin.z));
   float scale = 2.0 / largest_extent;
   model = glm::translate(model, glm::vec3(-center_x, -center_y, -center_z));
+  if (animation == "sway") {//TODO this is hardcoded mess need to make the animation feild in json more broad(maybe animation type and axis)
+    model = glm::rotate(model, (float)(sin(glfwGetTime())*0.1f), glm::vec3(1, 0, 0));
+  }
   model = glm::scale(model, glm::vec3(scale, scale, scale));
 
   glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, glm::value_ptr(model));
@@ -61,7 +65,7 @@ void SceneObject::setupColliders() {
 
   for (auto &shape : mesh->shapes) {
     auto box = std::make_shared<AABB>(shape->min, shape->max);
-		box->name = name;
+    box->name = name;
     box->transform(model);
     colliders.push_back(box);
   }
@@ -91,6 +95,9 @@ void Scene::load(const std::string &path, ResourceManager &rm) {
     // if flag for no collision for static objects
     auto is_static_ = obj.value("static", false);
     sceneObj.is_static = is_static_;
+
+    auto animation = obj.value("animation", "None");
+    sceneObj.animation = animation;
 
     auto pos = obj["position"];
     auto rot = obj["rotation"];

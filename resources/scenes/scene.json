@@ -9,28 +9,20 @@
 			"scale": [40, 10, 40]
 		},
 		{
-			"name": "cylinder_front",
-			"model": "multi_shape_cylinder.obj",
-			"texture": "wall.png",
-			"position": [-3.7, -0.1, 2],
-			"rotation": [64.29, -30, 90],
-			"scale": [1.2, 1.2, 1.2]
-		},
-		{
 			"name": "cylinder_back",
 			"model": "multi_shape_cylinder.obj",
 			"texture": "wall.png",
-			"position": [-7, -0.2, 1.5],
+			"position": [-5, 0.3, 2.2],
 			"rotation": [64.29, 0, 90],
-			"scale": [0.9, 0.9, 0.9]
+			"scale": [1.6, 1.5, 1.6]
 		},
 		{
 			"name": "cylinder_wall",
 			"model": "multi_shape_cylinder.obj",
 			"texture": "wall.png",
-			"position": [2, -0.2, 3],
-			"rotation": [64.29, 90, 90],
-			"scale": [1, 3, 1]
+			"position": [-15, 0.3, 3],
+			"rotation": [64.32, 90, 90],
+			"scale": [1.6, 3, 1.6]
 		},
 		{
 			"name": "house",
@@ -41,18 +33,18 @@
 			"scale": [8, 8, 8]
 		},
 		{
-			"name": "cementwall_2",
-			"model": "cementwall.obj",
+			"name": "cementwall_with_hole",
+			"model": "multi_shape_cementwall_with_hole.obj",
 			"texture": "concretewall.png",
-			"position": [4.2, 1.2, 18],
+			"position": [4.4, 1.2, 23],
 			"rotation": [0, 90, 0],
-			"scale": [10.5, 9, 7]
+			"scale": [4.5, 9, 7]
 		},
 		{
 			"name": "cementwall_with_hole",
 			"model": "multi_shape_cementwall_with_hole.obj",
 			"texture": "concretewall.png",
-			"position": [4.2, 1.2, 4],
+			"position": [4.4, 1.2, 4],
 			"rotation": [0, 90, 0],
 			"scale": [10.5, 9, 7]
 		},
@@ -108,9 +100,17 @@
 			"name": "pallet_top",
 			"model": "pallet.obj",
 			"texture": "wood.png",
-			"position": [2.5, 0.5, -4],
-			"rotation": [60, -90, 0],
+			"position": [2.5, 2.5, -5],
+			"rotation": [5, -90, 0],
 			"scale": [2, 2.5, 2]
+		},
+		{
+			"name": "pallet_side",
+			"model": "pallet.obj",
+			"texture": "wood.png",
+			"position": [1, 0.6, -5],
+			"rotation": [0, 0, 90],
+			"scale": [2.2, 2.5, 2]
 		},
 		{
 			"name": "pallet_floor",
@@ -246,7 +246,8 @@
 			"texture": "scaffoldingblue.png",
 			"position": [-20, 15, 13],
 			"rotation": [0, 90, 0],
-			"scale": [6, 6, 6]
+			"scale": [6, 6, 6],
+			"animation": "sway"
 		},
 		{
 			"name": "crate_tilted",
@@ -295,6 +296,46 @@
 			"position": [-21, -2, 5],
 			"rotation": [0, 90, 0],
 			"scale": [5, 5, 5]
+		},
+		{
+			"name": "scaffolding2",
+			"model": "scaffolding_multi_shape.obj",
+			"texture": "scaffoldingblue.png",
+			"position": [-21, 25, 40],
+			"rotation": [0, 90, 0],
+			"scale": [5, 5, 5]
+		},
+		{
+			"name": "scaffolding2",
+			"model": "scaffolding_multi_shape.obj",
+			"texture": "scaffoldingblue.png",
+			"position": [-21, 35, 40],
+			"rotation": [0, 90, 0],
+			"scale": [5, 5, 5]
+		},
+		{
+			"name": "scaffolding3",
+			"model": "scaffolding_multi_shape.obj",
+			"texture": "scaffoldingblue.png",
+			"position": [-21, 25, 50],
+			"rotation": [0, 90, 0],
+			"scale": [5, 5, 5]
+		},
+		{
+			"name": "abandoned_construction",
+			"model": "multi_abandoned_construction.obj",
+			"texture": "wall.png",
+			"position": [0,74, 44],
+			"rotation": [0, 90, 0],
+			"scale": [17, 19, 17]
+		},
+		{
+			"name": "wire_side",
+			"model": "wire.obj",
+			"texture": "wood.png",
+			"position": [11, 8, 8],
+			"rotation": [0, 20, 0],
+			"scale": [2, 2, 5]
 		},
 		{
 			"name": "wire_main",
@@ -385,7 +426,7 @@
 		{
 			"name": "skyscraper_1",
 			"model": "skyscraper.obj",
-			"texture": "skyscraper.png",
+			"texture": "skyscraper.jpg",
 			"position": [-80, 28, -80],
 			"rotation": [0, 0, 0],
 			"scale": [20, 20, 20],
@@ -394,7 +435,7 @@
 		{
 			"name": "skyscraper_2",
 			"model": "skyscraper.obj",
-			"texture": "skyscraper.png",
+			"texture": "skyscraper_2.jpg",
 			"position": [-105, 24, -65],
 			"rotation": [0, 51.43, 0],
 			"scale": [16, 16, 16],
@@ -403,9 +444,27 @@
 		{
 			"name": "skyscraper_3",
 			"model": "skyscraper.obj",
-			"texture": "skyscraper.png",
+			"texture": "skyscraper_3.jpg",
 			"position": [-110, 38, -10],
 			"rotation": [0, 0, 0],
+			"scale": [20, 20, 20],
+			"static": true
+		},
+		{
+			"name": "skyscraper_4",
+			"model": "skyscraper.obj",
+			"texture": "skyscraper.jpg",
+			"position": [-130, 36, -40],
+			"rotation": [0, 20, 0],
+			"scale": [20, 20, 20],
+			"static": true
+		},
+		{
+			"name": "skyscraper_5",
+			"model": "skyscraper.obj",
+			"texture": "skyscraper_3.jpg",
+			"position": [-130, 36, 20],
+			"rotation": [0, 20, 0],
 			"scale": [20, 20, 20],
 			"static": true
 		},
@@ -416,6 +475,14 @@
 			"position": [15, 6.7, 13],
 			"rotation": [0, 90, 0],
 			"scale": [10, 11, 10]
+		},
+		{
+			"name": "crane2",
+			"model": "multi_crane.obj",
+			"texture": "guardrail.png",
+			"position": [-15, 36, 33],
+			"rotation": [0, -95, 0],
+			"scale": [10, 13, 10]
 		},
 		{
 			"name": "hill",
