@@ -1,0 +1,71 @@
+
+#include "ResourceManager.h"
+#include "Shape.h"
+#include "Texture.h"
+
+#include <glad/glad.h>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader/tiny_obj_loader.h>
+
+// this function is needed to load obj into mesh object from a
+//.obj file path
+std::shared_ptr<Mesh> ResourceManager::getMesh(const std::string &name,
+                                               const std::string &path) {
+
+  // check if the mesh is already cached
+  if (meshCache.count(name))
+    return meshCache[name];
+
+  auto mesh = std::make_shared<Mesh>();
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+
+  glm::vec3 minBounds = glm::vec3(std::numeric_limits<float>::max());
+  glm::vec3 maxBounds = glm::vec3(-std::numeric_limits<float>::max());
+  std::string err;
+  bool rc = tinyobj::LoadObj(shapes, materials, err, path.c_str());
+  if (!rc)
+    std::cerr << err << std::endl;
+
+  // this is for looping through shapes and adding each one to
+  // mesh shape list as well as calculating entire boudning box
+  for (auto &toShape : shapes) {
+    auto shape = std::make_shared<Shape>();
+    shape->createShape(toShape);
+    shape->measure();
+    shape->init();
+    mesh->shapes.push_back(shape);
+
+    minBounds.x = std::min(minBounds.x, shape->min.x);
+    minBounds.y = std::min(minBounds.y, shape->min.y);
+    minBounds.z = std::min(minBounds.z, shape->min.z);
+
+    maxBounds.x = std::max(maxBounds.x, shape->max.x);
+    maxBounds.y = std::max(maxBounds.y, shape->max.y);
+    maxBounds.z = std::max(maxBounds.z, shape->max.z);
+  }
+
+  mesh->gMin = minBounds;
+  mesh->gMax = maxBounds;
+  // cache the mesh
+  meshCache[name] = mesh;
+  return mesh;
+}
+
+// this function is needed to laod textures from given filepath
+std::shared_ptr<Texture> ResourceManager::getTexture(const std::string &name,
+                                                     const std::string &path) {
+  if (textureCache.count(name))
+    return textureCache[name];
+
+  auto tex = std::make_shared<Texture>();
+  tex->setFilename(path);
+  tex->init();
+  tex->setUnit(0);
+  //tex->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+  tex->setWrapModes(GL_REPEAT, GL_REPEAT);//maybe have option in json for this
+  tex->setFiltering(GL_NEAREST, GL_NEAREST);
+  textureCache[name] = tex;
+  return tex;
+}

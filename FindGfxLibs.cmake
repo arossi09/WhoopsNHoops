@@ -59,7 +59,7 @@ function(findGLFW3 target)
     if(glfw3_FOUND)
 
         # Include paths are added automatically by the glfw3 find_package
-        target_link_libraries(${CMAKE_PROJECT_NAME} glfw)
+				target_link_libraries(${CMAKE_PROJECT_NAME} glfw)
 
     elseif(DEFINED ENV{GLFW_DIR})
 
