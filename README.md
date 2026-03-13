@@ -25,3 +25,4 @@ make
 # TODO
 - transmitter support for arming
 - death box for water
+- animated stat screen
