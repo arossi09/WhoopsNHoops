@@ -1,6 +1,6 @@
 #include "Physics.h"
 #include "GLFW//glfw3.h"
-
+#define CRASH_SPEED_THRESHOLD 20
 namespace Physics {
 bool handleCollision(const AABB &box, Drone &drone, SoundManager &sm,
                      bool wasTouching, bool &crashTriggeredThisFrame) {
@@ -13,7 +13,7 @@ bool handleCollision(const AABB &box, Drone &drone, SoundManager &sm,
 
     if (!wasTouching && !crashTriggeredThisFrame) {
       if (!(glfwGetTime() - drone.timeLastHit <= 1.0f) &&
-          box.name != "ground") {
+          /*box.name != "ground" &&*/ length(drone.velocity) >= CRASH_SPEED_THRESHOLD) {
 				if(!drone.special_mode)
         	drone.setHealth(drone.getHealth() - 1);
         drone.timeLastHit = glfwGetTime();

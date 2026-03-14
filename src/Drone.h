@@ -138,6 +138,7 @@ struct Drone {
     oldTrick = "";
     oldTrickCount = 0;
     totalScore = 0.0f;
+		batteryDecayRate  = BASE_DECAY_RATE;
     health = 5;
     position = glm::vec3(0.0f);
     acceleration = glm::vec3(0.0f);
@@ -164,7 +165,9 @@ struct Drone {
   void updatePosition(float dt) {
     if (!armed)
       throttle = 0;
-    battery -= batteryDecayRate + THROTTLE_FACTOR * throttle * dt;
+		if(armed){
+    	battery -= batteryDecayRate + THROTTLE_FACTOR * throttle * dt;
+		}
     battery = max(battery, 0.0f);
     if (battery > 100.0f) {
       battery = 100.0f;
