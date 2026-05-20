@@ -39,11 +39,11 @@ void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action,
   }
 
   if (key == GLFW_KEY_O && action == GLFW_PRESS) {
-		if(drone.getArmed()){
-			soundManager.stop(DRONE_PROPELLER);
-		}else{
-    	soundManager.play(DRONE_PROPELLER);
-		}
+    if (drone.getArmed()) {
+      soundManager.stop(DRONE_PROPELLER);
+    } else {
+      soundManager.play(DRONE_PROPELLER);
+    }
     drone.setArmed(!drone.getArmed());
   }
 
@@ -421,6 +421,9 @@ void Game::handleLogic() {
   // be played
   physicsWorld.handleDroneCollisions(drone, soundManager);
   Physics::clampToWorld(worldBox, drone);
+  if (deathBox.intersects(drone.getAABB())) {
+    gameOver();
+  }
 }
 
 /*function to render the scene, dt is delta time*/

@@ -88,4 +88,5 @@ void clampToWorld(const AABB &worldBox, Drone &drone) {
 
   drone.position = clampedPos;
 }
+
 } // namespace Physics

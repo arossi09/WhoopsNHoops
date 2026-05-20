@@ -142,7 +142,8 @@ private:
 	
 
   Drone drone;
-  AABB worldBox = AABB(vec3(-168, -20, -170), vec3(160, 500, 250));
+  AABB worldBox = AABB(vec3(-168, -32, -170), vec3(160, 500, 250));
+  AABB deathBox = AABB(vec3(-168, -30, -170), vec3(160, -30, 250));
 
   void keyCallback(GLFWwindow *window, int key, int scancode, int action,
                    int mods);
