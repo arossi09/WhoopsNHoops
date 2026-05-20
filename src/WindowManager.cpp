@@ -39,7 +39,7 @@ bool WindowManager::init(int const width, int const height) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	glfwWindowHint(GLFW_DEPTH_BITS, 24);
+  glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
   // Create a windowed mode window and its OpenGL context.
   windowHandle =
@@ -127,23 +127,23 @@ void WindowManager::pollGamepadInput() {
         unsigned char left_bumper =
             state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER];
 
-				bool currentLeftBumperState = (left_bumper == GLFW_PRESS);
-				bool leftBumperPressedOnce = false;
-				if(currentLeftBumperState && !previousLeftBumperState){
-					leftBumperPressedOnce = true;
-				}
+        bool currentLeftBumperState = (left_bumper == GLFW_PRESS);
+        bool leftBumperPressedOnce = false;
+        if (currentLeftBumperState && !previousLeftBumperState) {
+          leftBumperPressedOnce = true;
+        }
 
-				previousLeftBumperState = currentLeftBumperState;
-			
-					
+        previousLeftBumperState = currentLeftBumperState;
+
         if (instance && instance->callbacks) {
-          instance->callbacks->gamepadInputCallback(leftX, leftY, rightX,
-                                                    rightY, leftBumperPressedOnce, true);
+          instance->callbacks->gamepadInputCallback(
+              leftX, leftY, rightX, rightY, leftBumperPressedOnce, true);
         }
       }
     }
     // other(transmitter)
     else {
+      // poll the axis for rotation
       int count;
       const float *axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &count);
 
@@ -157,9 +157,21 @@ void WindowManager::pollGamepadInput() {
       float leftX = axes[3];
       float leftY = axes[2];
 
+      const unsigned char *buttons =
+          glfwGetJoystickButtons(GLFW_JOYSTICK_1, &count);
+
+      // ensure bumper to arm drone doesnt flip between
+      // armed and disarmed if held down
+      bool leftBumperPressedOnce = false;
+      if (buttons[0] && !previousLeftBumperState) {
+        leftBumperPressedOnce = true;
+      }
+
+      previousLeftBumperState = buttons[0];
+
       if (instance && instance->callbacks) {
-        instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY, true, //TODO fix this
-                                                  true);
+        instance->callbacks->gamepadInputCallback(leftX, leftY, rightX, rightY,
+                                                  leftBumperPressedOnce, true);
       }
     }
 
