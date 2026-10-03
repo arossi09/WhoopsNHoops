@@ -3,6 +3,7 @@
 void Game::keyCallback(GLFWwindow *window, int key, int scancode, int action,
                        int mods) {
 
+
   vec3 up = drone.orientation * vec3(0, 1, 0);
   vec3 front = drone.orientation * vec3(0, 0, -1);
   vec3 right = cross(up, front);
@@ -403,7 +404,6 @@ void Game::handleLogic() {
   } else if (gameOverFlag) {
     updateUsingCameraPath(dt);
   } else {
-
     timeAlive += dt;
     if ((int)(timeAlive / 60) > difficultyLevel) {
       drone.increaseDifficulty(difficultyLevel);

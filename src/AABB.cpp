@@ -1,22 +1,13 @@
-
 #include <memory>
 #include "AABB.h"
 #include "GLSL.h"
 #include "Program.h"
 #include "OBB.h"
-#include "Drone.h"
 
 
 AABB::AABB(const glm::vec3 &min, const glm::vec3 &max) : min(min), max(max), 
                         originalMin(min), originalMax(max){};
 
-/*
-AABB::AABB(const AABB& other)
-    : min(other.min), max(other.max),
-      originalMin(other.originalMin), originalMax(other.originalMax),
-      corners(other.corners), indices(other.indices)
-{}
-*/
 
 glm::vec3 AABB::getCenter() const{
     return(min + max) * 0.5f;

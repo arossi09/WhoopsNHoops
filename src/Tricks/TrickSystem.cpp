@@ -1,5 +1,8 @@
 #include "TrickSystem.h"
 
+/* Drone Motion Sample -> Extract Feature -> Gather Event -> Recognizers
+ */
+
 glm::vec3 ComputeAngularVelocityWorld(const glm::quat &previousOrientation,
                                       const glm::quat &currentOrientation,
                                       float dt) {
@@ -25,6 +28,7 @@ glm::vec3 ComputeAngularVelocityWorld(const glm::quat &previousOrientation,
   }
   return axis * (angle / dt); // radians per second
 }
+
 
 void TrickSystem::Update(float dt, const Drone &drone) {
   glm::vec3 angularVelocityWorld =

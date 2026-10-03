@@ -5,8 +5,8 @@ include("${CMAKE_SOURCE_DIR}/FindGfxLibs.cmake")
 project(WhoopsnHoops)
 
 # Enforce use of C++17
-set(CMAKE_CXX_STANDARD_REQUIRED 17)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED 20)
+set(CMAKE_CXX_STANDARD 20)
 
 #for compiler commands
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

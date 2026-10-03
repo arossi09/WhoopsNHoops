@@ -22,6 +22,7 @@ void MotionEventDetector::Update(const DroneFeatureFrame &features,
     e.startTime = features.time;
     e.endTime = features.time;
     outEvents.Push(e);
+    printf("Invert Started\n");
   }
 
   if(wasInverted && !features.isInverted){
@@ -30,6 +31,7 @@ void MotionEventDetector::Update(const DroneFeatureFrame &features,
     e.startTime = features.time;
     e.endTime = features.time;
     outEvents.Push(e);
+    printf("Invert Ended\n");
   }
   wasInverted = features.isInverted;
 
